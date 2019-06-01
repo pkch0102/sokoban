@@ -1,592 +1,947 @@
-﻿#include <stdio.h>
-#include <stdlib.h>
-//#include <termio.h>
-//#include <unistd.h>
-#include <time.h>
+#include <stdio.h>
+#include <termio.h>
+#include <stdbool.h>
 
-int i = -1, j, k, stage = 0, clear_num, time_num = 0, undo_reset_num = 0, first_com_error = 0;
-int box_num = 0, boxput_num = 0, err_num = 0;
-int pl_x, pl_y, game_exit = 0, save_stage, save_count = 0, dl_x, dl_y;
-int map_end[5][1], end_cnt;
-double start_time[5], finish_time[5], diff_time[5] = { 0 };
-char ch = 0, game_act = 0, get;
-char map_current[5][30][30], map_load[30][30];
-char map_file[5][30][30] = { };
-char undo[5][30][30];
-char name[10];
+#define Y 30 // 맵 최대 Y 값
+#define X 30 // 맵 최대 X 값
+#define STAGE 5 // 최대 스테이지 값
 
-void getname();
-void getmap();
-void checkmap();
-void showmap();
-void showcommand();
-void showname();
-void getkey();
-void time_set();
-void pl_move();
-void other_act();
-void undo_save();
-void undo_reset();
-void clear();
-void after_game();
+char data_map[STAGE][31][31],undo_map[STAGE][31][31],map[STAGE][31][31];
+char usrName[11],rank_name[STAGE][5][11];
+int maxi[5];
+int maxj[5];
+int goal_loc[5][5][5], rank_cnt[STAGE][5];
+int box_count[STAGE], goal_count[STAGE];
+int stage = -1, undo_cnt = 0 , move_cnt = 0, save_cnt = 0;
+void get_map();
+int player_x[5],player_y[5],origin_player_x[5] ,origin_player_y[5];
+int d_flg, t_flg,record;
 
-int getch(void) {	//문자열을 입력받는 함수
-	int ch;
-	/*
-		struct termios buf;
-		struct termios save;
 
-		tcgetattr(0, &save);
-		buf = save;
 
-		buf.c_lflag &= ~(ICANON | ECHO);
-		buf.c_cc[VMIN] = 1;
-		buf.c_cc[VTIME] = 0;
-
-		tcsetattr(0, TCSAFLUSH, &buf);
-
-		ch = getchar();
-		tcsetattr(0, TCSAFLUSH, &save);
-		*/
-
-	return ch;
+int main()
+{
+    
+    
+    return 0;
 }
 
 
-int main(void) {
-	getname();
-	getmap();
-	checkmap();
-	while (game_exit != 1) {
-		system("clear");
-		showname();
-		showmap();
-		showcommand();
-		time_set();
-		get = getch();
-		pl_move();
-		other_act();
-		clear();
-	}
-	after_game();
-	showcommand();
+void get_map(){
+    FILE *fp;
+    char ch;
+    int x = 0, y = 0;
+    
+    fp = fopen("map.txt", "r");
+    
+    while((fscanf(fp, "%c", &ch)) != EOF)
+    {
+        // 숫자 일때 새로운 스테이지
+        if(ch <= '5'&& ch >='1')
+        {
+            stage++;
+            y = -1;
+            continue;
+        }
+        // e 일때 종료
+        if(ch == 'e')
+        {
+            break;
+        }
+        
+        if(ch == '#' || ch == 'O')
+            // 플레이어 위치 기록
+            if(ch == '@')
+            {
+                player_x[stage] = x;
+                player_y[stage] = y;
+                
+                origin_player_x[stage] = x;
+                origin_player_y[stage] = y;
+            }
+        
+        // 상자 개수 카운트
+        if(ch == '$')
+        {
+            box_count[stage]++;
+        }
+        
+        // O 개수 카운트
+        if(ch == 'O')
+        {
+            goal_count[stage]++;
+        }
+        
+        if(ch == '\n')
+        {
+            y++;
+            x = 0;
+        }
+        // 맵 저장
+        else
+        {
+            map[stage][y][x] = ch;
+            
+            x++;
+        }
+    }
+    // 초기 맵 저장
+    for(int i = 0; i < STAGE; i++)
+    {
+        for(int j = 0; j < Y; j++)
+        {
+            for(int k = 0; k < X; k++)
+            {
+                data_map[i][j][k] = map[i][j][k];
+            }
+        }
+    }
+    
+    // $개수와 O개수가 다르면 종료
+    for(int i = 0; i < STAGE; i++)
+    {
+        if(box_count[i] != goal_count[i])
+        {
+            printf("ERROR : 박스 개수와 도착 지점의 개수가 다릅니다.\n");
+            return;
+        }
+    }
+    
+    // 스테이지 초기 값
+    stage = 0;
+    
+    fclose(fp);
+    
+    
+}
 
-	return 0;
+void show_Map()
+{
+    StageClear();
+    
+    printf("    Hello %s\n\n", usrName);
+    
+    // 맵 출력
+    for(int i = 0; i < Y; i++)
+    {
+        for(int j = 0; j < X; j++)
+        {
+            printf("%c", map[stage][i][j]);
+        }
+        printf("\n");
+    }
 }
 
 
-
-void getname() {	//이름을 입력받는 함수
-	system("clear");
-	printf("Start....\n");
-	printf("input name : ");
-	scanf("%s", name);
+void clearMap()
+{
+    system("clear");
+    system("clear");
 }
 
-void getmap() {	//map.txt에서 맵 불러와서 저장
-	FILE *file = fopen("map.txt", "r");
-
-	while (ch != 'e') {
-		for (k = 0; k < 30; k++) {
-			fscanf(file, "%c", &ch);
-			if (ch == 'm') {
-				i++;
-				j = 0;
-				k = -1;
-				continue;
-			}
-			if (ch == 'a' || ch == 'p') {
-				k--;
-				continue;
-			}
-			if (ch == 'e') {
-				break;
-			}
-			if (ch == '\n') {
-				j++;
-				k = -1;
-				continue;
-			}
-			else {
-				switch (ch) {
-				case ' ':	//공백일 경우 0으로 저장
-					map_file[i][j][k] = 0;
-					break;
-				case '#':	//벽일 경우 1로 저장
-					map_file[i][j][k] = 1;
-					break;
-				case '$':	//박스일 경우 2로 저장
-					map_file[i][j][k] = 2;
-					break;
-				case 'O':	//박스 놓는곳일 경우 4로 저장
-					map_file[i][j][k] = 4;
-					break;
-				case '@':	//플레이어일 경우 5로 저장
-					map_file[i][j][k] = 5;
-					break;
-				default:
-					break;
-				}
-			}
-		}
-	}
-
-	for (i = 0; i < 5; i++) {
-		for (j = 0; j < 30; j++) {
-			for (k = 0; k < 30; k++) {
-				map_current[i][j][k] = map_file[i][j][k];
-			}
-		}
-	}
-
-	for (i = 0; i < 5; i++) {
-		for (j = 1; j < 30; j++) {
-			end_cnt = 0;
-			for (k = 0; k < 30; k++) {
-				if (map_file[i][j][k] == 0) {
-					end_cnt++;
-				}
-			}
-			if (end_cnt == 30) {
-				map_end[i][0] = j;
-				break;
-			}
-		}
-	}
-	fclose(file);
+void save()
+{
+    FILE *save;
+    int i;
+    
+    // sokoban.txt를 w 모드로 열기
+    save = fopen("sokoban.txt", "w");
+    
+    // username, stage, move_count저장
+    fprintf(save, "%s\n", usrName);
+    fprintf(save, "%d\n", stage);
+    fprintf(save, "%d\n", move_cnt);
+    
+    i = stage;
+    // 현재 map 상태 저장
+    for(int j = 0; j < Y; j++)
+    {
+        for(int k = 0; k < X; k++)
+        {
+            fprintf(save, "%c", map[i][j][k]);
+        }
+        fprintf(save, "\n");
+    }
+    
+    
+    fclose(save);
 }
 
-void checkmap() {
-	for (i = 0; i < 5; i++) {
-		for (j = 0; j < 30; j++) {
-			for (k = 0; k < 30; k++) {
-				if (map_file[i][j][k] == 2)
-					box_num++;
-				if (map_file[i][j][k] == 4)
-					boxput_num++;
-			}
-		}
-		if (box_num != boxput_num) {
-			game_exit = 1;
-			err_num = 1;
-		}
-		box_num = 0;
-		boxput_num = 0;
-	}
+
+void FileLoad()
+{
+    FILE *fileload;
+    char ch;
+    int data_map[Y][X];
+    int load_x = 0, load_y = 0, load_z;
+    int line = 0;
+    
+    // sokoban.txt를 r 모드로 열기
+    fileload = fopen("sokoban.txt", "r");
+    // 로드한 파일이 빈 파일일 경우, 프로그램 종료하기
+    if (fileload == NULL)
+    {
+        printf("\n\n\nLoad File Doesn't Exist.\n\n");
+        
+        exit(1);
+    }
+    
+    fscanf(fileload,"%s\n", usrName);
+    fscanf(fileload,"%d\n%d\n%d", &stage, &undo_cnt, &move_cnt);
+    fscanf(fileload, "%c", &ch);
+    
+    // 파일의 끝부분까지 파일에 있는 내용 읽기
+    while(fscanf(fileload, "%c", &ch) != EOF)
+    {
+        // ch가 '\n' 개행일 경우, x좌표 0으로 초기화, line과 y좌표 1씩 증가
+        if(ch == '\n')
+        {
+            line++;
+            load_x = 0;
+            load_y++;
+        }
+        // 좌표 초기화하고 저장시킨 Undo 맵을 읽지 않기 위해 멈추기
+        else if(line == 29)
+        {
+            load_x = 0;
+            load_y = 0;
+            load_z = -1;
+            break;
+        }
+        // 읽어들인 문자를 대입하고 x좌표 1씩 증가
+        else
+        {
+            map[stage][load_y][load_x] = ch;
+            load_x++;
+        }
+        
+        // 플레이어 위치 좌표
+        if(ch == '@')
+        {
+            player_x[stage] = load_x - 1;
+            player_y[stage] = load_y;
+        }
+    }
+    
+    
+    printf("\n");
+    for(int a = 0; a < 5; a++)
+    {
+        for(int b = 0; b < Y; b++)
+        {
+            for(int c = 0; c < X; c++)
+            {
+                printf("%c", undo_map[a][b][c]);
+            }
+            printf("\n");
+        }
+    }
+    
+    fclose(fileload);
 }
 
-void showname() {
-
-	printf("    Hello ");
-	for (i = 0; i < 20; i++) {
-		printf("%c", name[i]);
-	}
-	printf("\n");
+void get_name()
+{
+    bool flag;
+    int i = 0;
+    int length;
+    
+    printf("Start....\n");
+    
+    // usrName[i]를 공백으로 초기화
+    for(int i = 0; i < 11; i++)
+    {
+        usrName[i] = ' ';
+    }
+    
+    while(1)
+    {
+        flag = true;
+        length = 0;
+        printf("input name : ");
+        scanf("%s", usrName);
+        
+        // username[i]의 값이 영문자 혹은 '\0'의 값이 아닐 경우
+        for(int i = 0; i < 11; i++)
+        {
+            if(!(('a' <= usrName[i] && usrName[i] <= 'z') || ('A' <= usrName[i] && usrName[i] <= 'Z')) && (usrName[i] != '\0'))
+            {
+                flag = false;
+            }
+            
+            if(usrName[i] == '\0')
+                break;
+        }
+        
+        // username[length]의 값이 '\0'일 때까지 반복
+        while(usrName[length] != '\0')
+        {
+            if(length > 9) // usrName의 글자가 10문자 초과했을 경우
+                flag = false;
+            
+            length++;
+        }
+        
+        if(flag)
+            break;
+        
+        printf("Name Must Be In English And Do Not Exceed 10 Letters.\n");
+    }
+    
+    getch();
+    clearMap();
 }
 
-void showmap() {
-	for (j = 0; j < map_end[stage][0]; j++) {
-		for (k = 0; k < 30; k++) {
-			switch (map_current[stage][j][k]) {
-			case 0:	//0일 경우 공백으로 표시
-				printf(" ");
-				break;
-			case 1:	//1일 경우 벽으로 표시
-				printf("#");
-				break;
-			case 2:	//2일 경우 박스로 표시
-				printf("$");
-				break;
-			case 4:	//4일 경우 박스놓는 곳으로 표시
-				printf("O");
-				break;
-			case 5:	//플레이어일 경우 5로 표시
-				printf("@");
-				pl_x = k;
-				pl_y = j;
-				break;
-			default:
-				break;
-			}
-		}
-		printf("\n");
-	}
+void Move()
+{
+    char key;
+    int dx = 0, dy = 0;
+    
+    printf("(Command) ");
+    
+    // 키 입력
+    key = getch();
+    
+    switch(key)
+    {
+            //  왼쪽 이동
+        case 'h':
+        case 'H':
+            dx = -1;
+            move_cnt++;
+            break;
+            
+            // 아래쪽 이동
+        case 'j':
+        case 'J':
+            dy = 1;
+            move_cnt++;
+            break;
+            
+            // 위쪽 이동
+        case 'k':
+        case 'K':
+            dy = -1;
+            move_cnt++;
+            break;
+            
+            // 오른쪽 이동
+        case 'l':
+        case 'L':
+            dx = 1;
+            move_cnt++;
+            break;
+    }
+    // h, j, k, l 이외의 명령이 들어올 경우 Option() 함수를 통하여 입력받음
+    if(((((((key != 'h' && key != 'j') && key != 'k') && key != 'l') && key != 'H') && key != 'J') && key != 'K') && key != 'L')
+    {
+        Option(key);
+    }
+    // 충돌 체크
+    if(map[stage][player_y[stage] + dy][player_x[stage] + dx] == '#') // 앞에 '#'벽이 있으면
+    {
+        dx = 0; // 움직이지 않음
+        dy = 0;
+    }
+    if(map[stage][player_y[stage] + dy][player_x[stage] + dx] == '$') // '$'상자를 만난다면
+    {
+        if(map[stage][player_y[stage] + 2*dy][player_x[stage] + 2*dx] == ' ') // 그 앞이 공백이라면
+        {
+            UndoMap(); // 언두 맵 저장
+            map[stage][player_y[stage] + dy][player_x[stage] + dx] = '@'; // 움직인 후 플레이어 좌표 저장
+            map[stage][player_y[stage] + 2*dy][player_x[stage]+ 2*dx] = '$'; // 움직인 후 상자 좌표 저장
+        }
+        else if(map[stage][player_y[stage] + 2*dy][player_x[stage] + 2*dx] == '#' || map[stage][player_y[stage] + 2*dy][player_x[stage] + 2*dx] == '$') // 플레이어가 상자를 밀고 있을때 상자 앞이 # 이거나 $ 이라면
+        {
+            dx = 0; // 움직이지 않음
+            dy = 0;
+        }
+    }
+    
+    if(map[stage][player_y[stage]+ dy][player_x[stage] + dx] == ' ') // 플레이어가 움직인다면
+    {
+        set_undo(); // 언두 맵 저장
+    }
+    
+    if(map[stage][player_y[stage] + dy][player_x[stage] + dx] == 'O') // 'O'를 만난다면
+    {
+        set_undo(); // 언두 맵 저장
+    }
+    
+    if(map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == 'O' &&map[stage][player_y[stage] + dy][player_x[stage] + dx] == '$') // 상자를 밀고 있고, 상자 앞에 'O'가 있다면
+    {
+        set_undo(); // 언두 맵 저장
+        map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] = '$'; // 상자를 앞으로 움직임
+    }
+    
+    map[stage][player_y[stage]][player_x[stage]] = ' '; // 플레이어의 전 위치를 지워줌
+    
+    if(data_map[stage][player_y[stage]][player_x[stage]] == 'O') // 원래 맵에서 'O'였으면
+    {
+        map[stage][player_y[stage]][player_x[stage]] = 'O'; // 'O' 계속 유지
+    }
+    
+    player_x[stage] += dx; // 플레이어 좌표 설정
+    player_y[stage] += dy; // 플레이어 좌표 설정
+    map[stage][player_y[stage]][player_x[stage]] = '@'; // @에 플레이어 좌표 대입
 }
 
-void showcommand() {
-	if (first_com_error == 0) {
-		undo_reset();
-	}
-	else {
-		printf("(Command) %c", game_act);
-	}
-	first_com_error = 1;
+void set_undo()
+{
+    int i, j, k = 0;
+    // 언두 맵 저장횟수가 5번이 넘었을경우
+    if(save_cnt >= 5)
+    {
+        for(i = 1; i < STAGE; i++)
+        {
+            for(j = 0; j < Y; j++)
+            {
+                for(k = 0; k < X; k++)
+                {
+                    undo[i - 1][j][k] = undo[i][j][k]; // 마지막 언두 저장맵을 버림
+                }
+            }
+        }
+        save_cnt--;
+    }
+    // 언두를 위한 맵 저장
+    for(j = 0; j < Y; j++)
+    {
+        for(k = 0; k < X; k++)
+        {
+            undo[save_cnt][j][k] = map[stage][j][k];
+        }
+    }
+    save_cnt++;
 }
 
-void time_set() {
-	if (time_num == 0) {
-		start_time[stage] = clock();
-		time_num = 1;
-	}
+void Undo()
+{
+    int undo_x = 0, undo_y = 0;
+    
+    if((undo_cnt < 1) || ((5 - undo_cnt) >= move_cnt))
+        return; // 언두 카운트가 0이거나 무브 카운트가 0인데 언두 가능 횟수가 남아 있을 경우 언두를 실행하지 않음
+    
+    undo_cnt--;
+    save_cnt--;
+    
+    for(int i = 0; i < Y; i++)
+    {
+        for(int j = 0; j < X; j++)
+        {
+            map[stage][i][j] = undo[save_cnt][i][j]; // 현재 맵을 언두맵에서 저장한 맵으로 대체함
+        }
+    }
+    // @의 좌표값을 저장함
+    for(int i = 0; i < Y; i++)
+    {
+        for(int j = 0; j < X; j++)
+        {
+            if(map[stage][i][j] == '@')
+            {
+                undo_x = j;
+                undo_y = i;
+            }
+        }
+    }
+    
+    player_y[stage] = undo_y; // 플레이어 y좌표 조정
+    player_x[stage] = undo_x; // 플레이어 x좌표 조정
 }
 
-void pl_move() {
-	if (get != 'u') {
-		undo_save();
-	}
-	switch (get) {
-	case 'l':
-		dl_x = 1, dl_y = 0;
-		if (map_file[stage][pl_y][pl_x] == 4) {	//있던 자리가 박스 놓는 위치일 경우
-			if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 2) {	//오른쪽이 박스일 경우
-				if (map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 1 && map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 2) {//건너편이 박스랑 벽이 아닐 경우
-					map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 오른쪽 이동
-					map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] = 2; //건너편은 박스
-					map_current[stage][pl_y][pl_x] = 4;	//있던 자리는 박스 놓는 위치로 바꿈
-				}
-				else {	//건너편이 박스나 벽일 경우
-					break;
-				}
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 1) {	//오른쪽이 벽일 경우
-				break;
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 0 || map_current[stage][pl_y + dl_y][pl_x + dl_x] == 4) {	//오른쪽이 공백이거나 박스 놓는곳일 경우에
-				map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 오른쪽 이동
-				map_current[stage][pl_y][pl_x] = 4;	//있던 자리는 박스 놓는 위치로 바꿈
-			}
-		}
-		else {	//있던 자리가 공백일 경우
-			if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 2) {	//오른쪽이 박스일 경우
-				if (map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 1 && map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 2) {//건너편이 박스랑 벽이 아닐 경우
-					map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 오른쪽 이동
-					map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] = 2; //건너편 박스
-					map_current[stage][pl_y][pl_x] = 0;	//있던 자리는 공백
-				}
-				else {	//건너편이 박스나 벽일 경우
-					break;
-				}
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 1) {	//오른쪽이 벽일 경우
-				break;
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 0 || map_current[stage][pl_y + dl_y][pl_x + dl_x] == 4) {	//오른쪽이 공백이거나 박스 놓는곳일 경우에
-				map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 오른쪽 이동
-				map_current[stage][pl_y][pl_x] = 0;	//있던 자리는 박스 놓는 공백
-			}
-		}
-		break;
-	case 'h':
-		dl_x = -1, dl_y = 0;
-		if (map_file[stage][pl_y][pl_x] == 4) {	//있던 자리가 박스 놓는 위치일 경우
-			if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 2) {	//왼쪽이 박스일 경우
-				if (map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 1 && map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 2) {//건너편이 박스랑 벽이 아닐 경우
-					map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 왼쪽 이동
-					map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] = 2; //건너편 박스
-					map_current[stage][pl_y][pl_x] = 4;	//있던 자리는 박스 놓는 위치로 바꿈
-				}
-				else {	//건너편이 박스나 벽일 경우
-					break;
-				}
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 1) {	//왼쪽이 벽일 경우
-				break;
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 0 || map_current[stage][pl_y + dl_y][pl_x + dl_x] == 4) {	//왼쪽이 공백이거나 박스 놓는곳일 경우에
-				map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 왼쪽 이동
-				map_current[stage][pl_y][pl_x] = 4;	//있던 자리는 박스 놓는 위치로 바꿈
-			}
-		}
-		else {	//있던 자리가 공백일 경우
-			if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 2) {	//왼쪽이 박스일 경우
-				if (map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 1 && map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 2) {	//건너편이 박스랑 벽이 아닐 경우
-					map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 왼쪽 이동
-					map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] = 2; //건너편 박스
-					map_current[stage][pl_y][pl_x] = 0;	//있던 자리는 공백
-				}
-				else {	//건너편이 박스나 벽일 경우
-					break;
-				}
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 1) {	//오른쪽이 벽일 경우
-				break;
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 0 || map_current[stage][pl_y + dl_y][pl_x + dl_x] == 4) {	//건너편이 박스랑 벽이 아닐 경우
-				map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 왼쪽 이동
-				map_current[stage][pl_y][pl_x] = 0;	//있던 자리는 공백
-			}
-		}
-		break;
-	case 'j':
-		dl_x = 0, dl_y = 1;
-		if (map_file[stage][pl_y][pl_x] == 4) {	//있던 자리가 박스 놓는 위치일 경우
-			if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 2) {	//아래쪽이 박스일 경우
-				if (map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 1 && map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 2) {//건너편이 박스랑 벽이 아닐 경우
-					map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 아래쪽 이동
-					map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] = 2; //건너편 박스
-					map_current[stage][pl_y][pl_x] = 4;	//있던 자리는 박스 놓는 위치로 바꿈
-				}
-				else {	//건너편이 박스나 벽일 경우
-					break;
-				}
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 1) {	//오른쪽이 벽일 경우
-				break;
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 0 || map_current[stage][pl_y + dl_y][pl_x + dl_x] == 4) {	//아래쪽이 공백이거나 박스 놓는곳일 경우에
-				map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 아래쪽 이동
-				map_current[stage][pl_y][pl_x] = 4;	//있던 자리는 박스 놓는 위치로 바꿈
-			}
-		}
-		else {	//있던 자리가 공백일 경우
-			if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 2) {	//아래쪽이 박스일 경우
-				if (map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 1 && map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 2) {//건너편이 박스랑 벽이 아닐 경우
-					map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 아래쪽 이동
-					map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] = 2; //건너편 박스
-					map_current[stage][pl_y][pl_x] = 0;	//있던 자리는 공백
-				}
-				else {	//건너편이 박스나 벽일 경우
-					break;
-				}
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 1) {	//아래쪽이 벽일 경우
-				break;
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 0 || map_current[stage][pl_y + dl_y][pl_x + dl_x] == 4) {	//아래쪽이 공백이거나 박스 놓는곳일 경우에
-				map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 아래쪽 이동
-				map_current[stage][pl_y][pl_x] = 0;	//있던 자리는 공백
-			}
-		}
-		break;
-	case 'k':
-		dl_x = 0, dl_y = -1;
-		if (map_file[stage][pl_y][pl_x] == 4) {	//있던 자리가 박스 놓는 위치일 경우
-			if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 2) {	//위쪽이 박스일 경우
-				if (map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 1 && map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 2) {//건너편이 박스랑 벽이 아닐 경우
-					map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 위쪽 이동
-					map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] = 2; //건너편 박스
-					map_current[stage][pl_y][pl_x] = 4;	//있던 자리는 박스 놓는 위치로 바꿈
-				}
-				else {
-					break;
-				}
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 1) {	//오른쪽이 벽일 경우
-				break;
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 0 || map_current[stage][pl_y + dl_y][pl_x + dl_x] == 4) {	//위쪽이 공백이거나 박스 놓는곳일 경우에
-				map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 위쪽 이동
-				map_current[stage][pl_y][pl_x] = 4;	//있던 자리는 박스 놓는 위치로 바꿈
-			}
-		}
-		else {	//있던 자리가 공백일 경우
-			if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 2) {	//위쪽이 박스일 경우
-				if (map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 1 && map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] != 2) {	//건너편이 박스랑 벽이 아닐 경우
-					map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 위쪽 이동
-					map_current[stage][pl_y + 2 * dl_y][pl_x + 2 * dl_x] = 2; //건너편 박스
-					map_current[stage][pl_y][pl_x] = 0;
-				}
-				else {	//건너편이 박스나 벽이 경우
-					break;
-				}
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 1) {	//위쪽이 벽일 경우
-				break;
-			}
-			else if (map_current[stage][pl_y + dl_y][pl_x + dl_x] == 0 || map_current[stage][pl_y + dl_y][pl_x + dl_x] == 4) {	//위쪽이 공백이거나 박스 놓는곳일 경우에
-				map_current[stage][pl_y + dl_y][pl_x + dl_x] = 5;	//플레이어 위쪽 이동
-				map_current[stage][pl_y][pl_x] = 0;	//있던 자리는 공백
-			}
-		}
-		break;
-	default:
-		break;
-	}
-	game_act = ' ';
+bool StageClear()
+{
+    int count = 0;
+    bool flag = false;
+    
+    for(int y = 0; y < Y; y++)
+    {
+        for(int x = 0; x < X; x++)
+        {
+            if(data_map[stage][y][x] == 'O' && map[stage][y][x] == '$') // 원래 맵의 O의 좌표와 현재 맵의 $의 좌표가 같을 경우
+            {
+                count++; // count값이 증가
+            }
+        }
+    }
+    
+    if(count == goal_count[stage]) // count 값이 스테이지 클리어를 위한 값과 같을 때
+    {
+        SaveTop(); //점수 기록
+        stage++; // 스테이지 증가
+        flag = true; // flag에 true값
+        move_cnt = 0; //점수 초기화
+    }
+    
+    if(stage >= 5) // 5스테이지 까지 클리어할 경우
+    {
+        printf("\n\nCongratulations !\n"); // 축하 문구전송
+        printf("\nAll Stage Clear !\n\n");
+        exit(0); // 프로그램 종료
+    }
+    
+    if(flag) // 스테이지가 올라가면 언두저장맵을 초기화시킴
+    {
+        for(int k = 0; k < STAGE; k++)
+        {
+            for(int i = 0; i < Y; i++)
+            {
+                for(int j = 0; j < X; j++)
+                {
+                    undo_map[k][i][j] = ' ';
+                }
+            }
+        }
+        
+        save_cnt = 0; // 스테이지가 올라가면 세이브 카운트 초기화
+        undo_cnt = 5; // 스테이지가 올라가면  언두 카운트 초기화
+        move_cnt = 0; // 스테이지가 올라가면 무브 카운트 초기화
+    }
+    
+    return flag;
 }
 
-void other_act() {
-	switch (get) {
-	case 'r':	//현재 맵 처음부터 다시 시작
-		for (j = 0; j < 30; j++) {
-			for (k = 0; k < 30; k++) {
-				map_current[stage][j][k] = map_file[stage][j][k];
-			}
-		}
-		game_act = 'r';
-		undo_reset_num = 0;
-		undo_reset();
-		break;
-	case 'n':	//첫번째 맵부터 다시 시작
-		stage = 0;
-		for (i = 0; i < 5; i++) {
-			for (j = 0; j < 30; j++) {
-				for (k = 0; k < 30; k++) {
-					map_current[i][j][k] = map_file[i][j][k];
-				}
-			}
-		}
-		game_act = 'n';
-		undo_reset_num = 0;
-		undo_reset();
-		time_num = 0;
-
-		break;
-	case 'e':	//게임 종료, 종료하기전에 저장해야 함
-		if (save_count == 1) {
-			game_exit = 1;
-		}
-		else {
-			printf("e\n종료하기 전에 저장해야 합니다\n");
-			//sleep(1);
-		}
-		game_act = 'e';
-		break;
-	case 's': {	//현재 상태를 파일에 저장	
-		FILE *f = fopen("sokoban.txt", "w");
-		for (j = 0; j < 30; j++) {
-			for (k = 0; k < 30; k++) {
-				fprintf(f, "%d", map_current[stage][j][k]);
-			}
-		}
-		fprintf(f, "%d", stage);
-		save_count = 1;
-		fclose(f);
-		game_act = 's';
-		break;
-	}
-	case 'd':	//명령 내용 보여주기
-		system("clear");
-		showname();
-		printf("\n");
-		printf("h(왼쪽), j(아래), k(위), l(오른쪽)\n");
-		printf("u(undo)\n");
-		printf("r(replay)\n");
-		printf("n(new)\n");
-		printf("e(exit)\n");
-		printf("s(save)\n");
-		printf("f(file load)\n");
-		printf("d(display help)\n");
-		printf("t(top)\n\n");
-		game_act = 'd';
-		showcommand();
-		game_act = ' ';
-		getch();
-
-		break;
-	case 'f': {	//저장된 내용을 불러오기
-		FILE *f = fopen("sokoban.txt", "r");
-		for (j = 0; j < 30; j++) {
-			for (k = 0; k < 30; k++) {
-				fscanf(f, "%c", &ch);
-				map_load[j][k] = ch - 48;
-			}
-		}
-		fscanf(f, "%c", &save_stage);
-		stage = save_stage - 48;
-		for (j = 0; j < 30; j++) {
-			for (k = 0; k < 30; k++) {
-				map_current[stage][j][k] = map_load[j][k];
-			}
-		}
-		fclose(f);
-		game_act = 'f';
-		break;
-	}
-	case 't':	//게임 순위 보여주기
-		system("clear");
-		showname();
-		for (i = 0; i < 5; i++) {
-			printf("%.1f\n", diff_time[stage]);
-		}
-		game_act = 't';
-		showcommand();
-		game_act = ' ';
-		getch();
-		break;
-	case 'u':	//예전 상태로 돌아가기, 최대 5번까지
-		for (j = 0; j < 30; j++) {
-			for (k = 0; k < 30; k++) {
-				map_current[stage][j][k] = undo[0][j][k];
-			}
-		}
-		for (i = 0; i < 4; i++) {
-			for (j = 0; j < 30; j++) {
-				for (k = 0; k < 30; k++) {
-					undo[i][j][k] = undo[i + 1][j][k];
-				}
-			}
-		}
-		game_act = 'u';
-		break;
-	default:
-		break;
-	}
+void Option(char key)
+{
+    char enter;
+    int Top_i;
+    
+    // h(H), j(J), k(K), l(L) 를 제외한 키 출력하기
+    if(((((((key != 'h' && key != 'j') && key != 'k') && key != 'l') && key != 'H') && key != 'J') && key != 'K') && key != 'L')
+        printf("%c", key);
+    
+    enter = getch();
+    
+    switch (key)
+    {
+        case 's':
+        case 'S':
+            if(enter == '\n')
+                save(); // s(S) 키를 눌렀을 때 Save() 기능 실행
+            break;
+            
+        case 'f':
+        case 'F':
+            if(enter == '\n')
+                FileLoad(); // f(F) 키를 눌렀을 때 FileLoad() 기능 실행
+            break;
+            
+        case 'd' :
+        case 'D' :
+            if(d_flg==0)
+            {
+                d_flg = 1;
+                Display();
+            }
+            StopTime(); //정지된시간 계산
+            break;
+            
+        case 'r' :
+        case 'R' :
+            Replay();
+            break;
+            
+        case 'n' :
+        case 'N' :
+            New();
+            break;
+            
+            
+        case 't':
+        case 'T':
+            if(t_flg == 0)
+            {
+                t_flg = 1;
+            }
+            switch (enter)
+        {
+                // enter 값이 1, 2, 3, 4, 5일 경우 각각의 스테이지 Top 출력
+            case '1' :
+                printf("1");
+                Top_i = 1;
+                break;
+                
+            case '2' :
+                printf("2");
+                Top_i = 2;
+                break;
+                
+            case '3' :
+                printf("3");
+                Top_i = 3;
+                break;
+                
+            case '4' :
+                printf("4");
+                Top_i = 4;
+                break;
+                
+            case '5' :
+                printf("5");
+                Top_i = 5;
+                break;
+                
+                // enter 값이 '\n' 개행일 경우 전체 Top 출력
+            case '\n' :
+                Top_i = 0; //t만 입력했을때
+                break;
+                
+            default :
+                Top_i = -1;
+                printf("\n-----------------------------------\n\n       Command Doesn't Exit.\n\n-----------------------------------\n");
+                break;
+        }
+            
+            while(1)
+            {
+                if(Top_i == 0)
+                {
+                    Top(0); //맵전체 랭킹기록을 보여줌
+                    break;
+                }
+                if(Top_i == -1)
+                {
+                    break;
+                }
+                if(getch() == '\n' && Top_i != 0 && Top_i != -1)
+                {
+                    Top(Top_i); //해당 맵의 랭킹기록을 보여줌
+                    break;
+                }
+            }
+            StopTime(); //정지된시간 계산
+            break;
+            
+        case 'e':
+        case 'E':
+            if(enter == '\n')
+                clearMap();
+            printf("\n\n\nSEE YOU %s . . . .\n\n\n", username);
+            Save(); // 게임 종료하기 전에 저장하기
+            exit(0);
+            break;
+            
+        case 'u':
+        case 'U'://u, U 가 입력시 언두 기능 실행
+            if(enter == '\n')
+                Undo();
+            break;
+            
+        default :
+            if(enter == '\n')
+                printf("\n-----------------------------------\n\n       Command Doesn't Exist.\n\n-----------------------------------\n");
+            sleep(1);
+            break;
+    }
 }
 
-void clear() {	//게임을 클리어 했는지 판단하는 함수
-	clear_num = 0;
-	for (j = 0; j < 30; j++) {	//박스 놓는 곳이 있는지 판단하기
-		for (k = 0; k < 30; k++) {
-			if (map_current[stage][j][k] == 4) {
-				clear_num++;
-			}
-		}
-	}
-	if (stage != 5 && clear_num == 0 && map_file[stage][pl_y + dl_y][pl_x + dl_x] != 4) {	//박스 놓는 곳이 없고 플레이어 위치가 박스 놓는 곳이 아니라면 클리어
-		finish_time[stage] = clock();
-		diff_time[stage] = (finish_time[stage] - start_time[stage]) * 2.5 / CLOCKS_PER_SEC;
-		printf("걸린시간: %.1f초", diff_time[stage]);
-		stage++;
-		undo_reset_num = 0;
-		time_num = 0;
-		getch();
-	}
-	if (stage == 5) {
-		game_exit = 1;
-	}
+void SaveTop()
+{
+    FILE *fp;
+    char name[11];
+    char a;
+    int record;
+    int i, j, k;
+    
+    fp = fopen("ranking.txt", "r");
+    
+    //입력
+    while(1)
+    {
+        for(i = 0; i < STAGE; i++)
+        {
+            for(j = 0; j < 5; j++)
+            {
+                fscanf(fp, "%s %d\n", &name, &record);
+                for(k=0; k<11; k++)
+                {
+                    if(name[0] == '0' && name[1] == '.' && name[2] == '0' && name[3] == '\0')
+                    {
+                        score_name[i][j][0] = ' ';
+                        score_name[i][j][1] = ' ';
+                        score_name[i][j][2] = '\0';
+                        break; //이름이 0.0 디폴트 값으로 되어있으면 배열에 "  "으로 저장한다
+                    }
+                    if(name[k] == '\0')
+                    {
+                        break;
+                    }
+                    rank_name[i][j][k] = name[k];
+                }
+                rank_cnt[i][j] = record;
+            }
+        }
+        if((fscanf(fp, "%c", &a)) == EOF)
+        {
+            break; //파일이 끝나면 더이상 반복하지 않는다.
+        }
+    }
+    
+    //새로운 점수 값이 입력되면 크기를 비교해 배열에 넣는다.
+    for(i = 0; i < 4; i++)
+    {
+        //새로운 점수값이 0~3번쨰 점수들 사이에 들어가거나 0을제외한 값중 가장 클때
+        if(score_time[stage][i] > score || score_time[stage][i] == 0 )
+        {
+            //새로운 점수값이 들어갈자리를 비우기 위해 뒤로 값을 미룬다
+            for(j = 0; j < 4-i; j++)
+            {
+                rank_cnt[stage][4-j] = rank_cnt[stage][3-j];
+                for(k = 0; k < 11; k++)
+                {
+                    rank_name[stage][4-j][k] = rank_name[stage][3-j][k];
+                }
+            }
+            for(k = 0; k < 11; k++)  //새로운 점수값 입력
+            {
+                rank_name[stage][i][k] = usrName[k];
+            }
+            rank_cnt[stage][i] = score;
+            break;
+        }
+    }
+    //새로운 점수가 4번째값일때
+    if(rank_cnt[stage][i] > score || rank_cnt[stage][i] == 0)
+    {
+        rank_cnt[stage][i] = score;
+        
+        for(k = 0; k < 11; k++)
+        {
+            rank_name[stage][i][k] = username[k];
+        }
+    }
+    
+    fclose(fp);
+    
+    //랭킹 파일에 저장
+    fp = fopen("ranking.txt", "w");
+    
+    for(i = 0; i < 5; i++)
+    {
+        for(j = 0; j < 5; j++)
+        {
+            if(rank_name[i][j][0] == ' ' && rank_name[i][j][1] == ' ' && rank_name[i][j][2] == '\0')
+            {
+                fprintf(fp, "0.0 ", rank_name[i][j]); //이름이 "  "이면 0.0 디폴트 값으로 저장
+            }
+            else
+            {
+                fprintf(fp, "%s ", rank_name[i][j]);
+            }
+            fprintf(fp, "%d", rank_cnt[i][j]);
+        }
+    }
+    
+    fclose(fp);
+    
 }
 
-void undo_save() {	//undo를 5개 저장하게 해주는 함수
-	for (i = 4; i > 0; i--) {
-		for (j = 0; j < 30; j++) {
-			for (k = 0; k < 30; k++) {
-				undo[i][j][k] = undo[i - 1][j][k];
-			}
-		}
-	}
-	for (j = 0; j < 30; j++) {
-		for (k = 0; k < 30; k++) {
-			undo[0][j][k] = map_current[stage][j][k];
-		}
-	}
+void Top(int Top_num)
+{
+    FILE *fp;
+    char name[11];
+    char a;
+    int record;
+    int i, j, k;
+    
+    fp = fopen("ranking.txt", "r");
+    
+    //이름과 기록을 읽어들인다.
+    while(1)
+    {
+        for(i = 0; i < STAGE; i++)
+        {
+            for(j = 0; j < 5; j++)
+            {
+                fscanf(fp, "%s %d\n", &name, &record);
+                for(k=0; k<11; k++)
+                {
+                    if(name[0] == '0' && name[1] == '.' && name[2] == '0')
+                    {
+                        rank_name[i][j][0] = ' ';
+                        rank_name[i][j][1] = ' ';
+                        rank_name[i][j][2] = '\0';
+                        break; //이름이 0.0 디폴트 값으로 되어있으면 배열에 "  "으로 저장한다
+                    }
+                    if(name[k] == '\0')
+                    {
+                        break;
+                    }
+                    rank_name[i][j][k] = name[k];
+                }
+                rank_cnt[i][j] = record;
+            }
+        }
+        if((fscanf(fp, "%c", &a)) == EOF)
+        {
+            break; //파일이 끝나면 더이상 반복하지 않는다.
+        }
+    }
+    
+    int s = 0; //이름이 저장되어있는지의 유무로 출력하기위한 변수
+    
+    //Top_i에 따라 출력
+    while(1)
+    {
+        clearMap(); //0일때 모든맵의 기록 출력
+        if(Top_num == 0)
+        {
+            for(i = 0; i < STAGE; i++)
+            {
+                printf("map %d\n\n", i+1);
+                for(j = 0; j < 5; j++)
+                {
+                    for(k = 0; k < 11; k++)
+                    {
+                        if(score_name[i][j][0] == ' ' && score_name[i][j][1] == ' ' && score_name[i][j][2] == '\0')
+                        {
+                            s = 0;
+                            break; //이름이 "  "으로 기록이 없으면 출력하지 않게 함
+                        }
+                        else
+                        {
+                            s = 1;
+                            break;
+                        }
+                    }
+                    if(s == 1) //기록이 있을경우 출력
+                    {
+                        printf("%s  ", rank_name[i][j]);
+                        printf("%d", rank_cnt[i][j]);
+                    }
+                    printf("\n");
+                }
+            }
+        }
+        if(Top_num != 0)
+        {
+            i = Top_num-1;
+            printf("map %d\n\n", i+1);
+            for(j = 0; j < 5; j++)
+            {
+                for(k = 0; k < 11; k++)
+                {
+                    if(score_name[i][j][0] == ' ' && score_name[i][j][1] == ' ' && score_name[i][j][2] == '\0')
+                    {
+                        s = 0;
+                        break; //이름이 "  "으로 기록이 없으면 출력하지 않게 함
+                    }
+                    else
+                    {
+                        s = 1;
+                        break;
+                    }
+                }
+                if(s == 1) //기록이 있을경우 출력
+                {
+                    printf("%s  ", score_name[i][j]);
+                    printf("%.1f sec", score_time[i][j]);
+                }
+                printf("\n");
+            }
+        }
+        printf("나가려면 t키를 누르시오."); //출력후 들어온 상태면서 t,T 를 누를경우 빠져나간다.
+        if(getch()=='t' && t_bl == 1)
+        {
+            t_flg = 0;
+            break;
+        }
+    }
+    return;
+    
 }
 
-void undo_reset() {	//초반에 undo 눌렀을때 안움직이게 해주고 r, n눌렀을때 undo 초기화
-	if (undo_reset_num == 0) {
-		for (i = 0; i < 5; i++) {
-			for (j = 0; j < 30; j++) {
-				for (k = 0; k < 30; k++) {
-					undo[i][j][k] = map_file[stage][j][k];
-				}
-			}
-		}
-	}
-	undo_reset_num = 1;
+void Display()
+{
+    while(1)
+    {
+        clearMap();
+        printf("h : 왼쪽으로 이동, j : 아래로 이동, k : 위로 이동, l : 오른쪽으로 이동\n");
+        printf("u : 움직이기 전 상태로 이동한다. (최대 5번 가능)\n");
+        printf("r : 현재 맵을 처음부터 다시시작한다.\n");
+        printf("n : 첫 번째 맵부터 다시 시작\n");
+        printf("e : 게임종료\n");
+        printf("s : 게임 저장\n");
+        printf("f : 게임을 이어서한다.\n");
+        printf("d : 명령내용을 보여준다.\n");
+        printf("t : 게임 순위를 보여준다.\n");
+        printf("나가려면 d키를 누르시오.\n");
+        if(getch()=='d' & d_flg == 1)
+        {
+            d_flg = 0;
+            break;
+        }
+    }
+    return;
 }
 
-void after_game() {
-	if (err_num == 1) {
-		system("clear");
-		printf("\n맵 파일에서 박스개수와 보관장수 개수가 같지 않습니다\n\n\n");
-		printf("(Command) %c", game_act);
-	}
-	else if (stage < 5) {
-		system("clear");
-		printf("\nSee YOU %s....\n\n\n", name);
-	}
-	else if (stage == 5) {
-		system("clear");
-		printf("\n게임을 클리어하셨습니다! %s님축하합니다~\n\n\n", name);
-	}
+void Replay()
+{
+    int stage_tmp = stage;
+    clearMap();
+    int i, j, k;
+    
+    for(int k = 0; k < STAGE; k++)
+    {
+        for(int i = 0; i < Y; i++)
+        {
+            for(int j = 0; j < X; j++)
+            {
+                undo[k][i][j] = ' ';
+            }
+        }
+    }
+    
+    move_count = 0;
+    undo_count = 5;
+    save_count = 0;
+    //초기맵과 초기플레이어위치 불러오기
+    i = stage_tmp;
+    for(j = 0; j < Y; j++)
+    {
+        for(k = 0; k < X; k++)
+        {
+            map[i][j][k] = data_map[i][j][k];
+        }
+    }
+    player_x[i] = origin_player_x[i];
+    player_y[i] = origin_player_y[i];
 }
+
+void New()
+{
+    
+    clearMap();
+    stage = 0; //1스테이지로 변경
+    
+    int i, j, k;
+    
+    for(int k = 0; k < STAGE; k++)
+    {
+        for(int i = 0; i < Y; i++)
+        {
+            for(int j = 0; j < X; j++)
+            {
+                undo_map[k][i][j] = ' ';
+            }
+        }
+    }
+    
+    move_cnt = 0;
+    undo_cnt = 5;
+    save_cnt = 0;
+    //초기맵과 초기플레이어위치 불러오기
+    for(i = 0; i < STAGE; i++)
+    {
+        for(j = 0; j < Y; j++)
+        {
+            for(k = 0; k < X; k++)
+            {
+                map[i][j][k] = data_map[i][j][k];
+            }
+        }
+        player_x[i] = origin_player_x[i];
+        player_y[i] = origin_player_y[i];
+    }
+}
+

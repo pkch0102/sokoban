@@ -2,38 +2,40 @@
 #include <stdlib.h>
 #include <termio.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #define Y 30 // 맵 최대 Y 값
 #define X 30 // 맵 최대 X 값
 #define STAGE 5 // 최대 스테이지 값
 
-char data_map[STAGE][31][31], undo_map[STAGE][31][31], map[STAGE][31][31];
-char usrName[11], rank_name[STAGE][5][11];
+char data_map[STAGE][31][31], undo_map[STAGE][31][31], map[STAGE][31][31];//왼쪽부터 파일에서 맵을 받아와서 저장하는 배열, undo를 사용할때 쓸 배열, 게임플레이에 관여할 배열
+char usrName[11], rank_name[STAGE][5][11];//유저의 이름, 순위권 플레이어의 이름
 int maxi[5];
 int maxj[5];
-int goal_loc[5][5][5], rank_cnt[STAGE][5];
-int box_count[STAGE], goal_count[STAGE];
-int stage = -1, undo_cnt = 5, move_cnt = 0, save_cnt = 0;
-int player_x[5], player_y[5], origin_player_x[5], origin_player_y[5];
-int d_flg, t_flg, record;
+int goal_loc[5][5][5], rank_cnt[STAGE][5];//스테이지별 창고의 위치, 순위권플레이어의 점수
+int box_count[STAGE], goal_count[STAGE];//금의 개수와 창고의 개수
+int stage = -1, undo_cnt = 5, move_cnt = 0, save_cnt = 0;//스테이지 초기 값,  얼마나 undo를 많이 했는가, 움직인 횟수, undo맵 저장 횟수
+int player_x[5], player_y[5], origin_player_x[5], origin_player_y[5];//현재 플레이어의 좌표와 초기 플레이어의 좌표
+int d_flg, t_flg, record;//dispaly기능이 실행되고 있는가, top기능이 실행되고 있는가, 순위권 플레이어의 점수를 받아올 때 필요한 임시 변수
+int master_key;//입력한 커맨드 출력에 필요한 변수
 
-void get_map();
-void show_Map();
-void clearMap();
-void save();
-void FileLoad();
-void Move();
-void get_name();
-void set_undo();
-void Undo();
-void SaveTop();
-void New();
-void Replay();
-void Option(char key);
-bool StageClear();
-void Display();
-void Top(int Top_num);
-int getch(void);
+void get_map();//맵 파일 읽어오기
+void show_Map();//맵 보여주기
+void clearMap();//화면 삭제
+void save();//맵 저장 기능
+void FileLoad();//저장된 맵 불러오기
+void Move();//플레이어의 움직임
+void get_name();//유저의 이름 받기
+void set_undo();//undo맵 업데이트
+void Undo();//undo기능
+void SaveTop();//ranking.txt에서 데이터를 읽어와 rank_cnt와 rank_name 업데이트 및 다시 ranking.txt업데이트
+void New();//1스테이지 부터 시작
+void Replay();//스테이지 다시시작
+void Option(char key);//움직임이외에 커맨드 제어
+bool StageClear();//스테이지를 클리어 했는가
+void Display();//display help기능
+void Top(int Top_num);//순위를 보여준다
+int getch(void);//커맨드 입력
 
 int main()
 {
@@ -183,6 +185,12 @@ void show_Map()
 		}
 		printf("\n");
 	}
+	if(master_key != 't' || master_key != ' ')
+	printf("(Command) %c\n",master_key);
+	else {
+		printf("(Command)\n");
+	}
+	master_key = ' ';
 }
 
 
@@ -342,14 +350,20 @@ void get_name()
 
 void Move()
 {
-	char key;
+	char key = ' ';
 	int dx = 0, dy = 0;
-
-	printf("(Command) ");
 
 	// 키 입력
 	key = getch();
-
+	clearMap();
+	show_Map();
+	// h, j, k, l 이외의 명령이 들어올 경우 Option() 함수를 통하여 입력받음
+	if (((((((key != 'h' && key != 'j') && key != 'k') && key != 'l') && key != 'H') && key != 'J') && key != 'K') && key != 'L')
+	{
+		master_key = key;
+		Option(key);
+		return;
+	}
 	switch (key)
 	{
 		//  왼쪽 이동
@@ -376,11 +390,7 @@ void Move()
 		dx = 1;
 		break;
 	}
-	// h, j, k, l 이외의 명령이 들어올 경우 Option() 함수를 통하여 입력받음
-	if (((((((key != 'h' && key != 'j') && key != 'k') && key != 'l') && key != 'H') && key != 'J') && key != 'K') && key != 'L')
-	{
-		Option(key);
-	}
+	
 	// 충돌 체크
 	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == '#') // 앞에 '#'벽이 있으면
 	{
@@ -556,9 +566,7 @@ void Option(char key)
 	int Top_i;
 
 	// h(H), j(J), k(K), l(L) 를 제외한 키 출력하기
-	if (((((((key != 'h' && key != 'j') && key != 'k') && key != 'l') && key != 'H') && key != 'J') && key != 'K') && key != 'L')
-		printf("%c", key);
-
+	
 
 	switch (key)
 	{
@@ -594,6 +602,7 @@ void Option(char key)
 
 	case 't':
 	case 'T':
+		printf("t");
 		if (t_flg == 0)
 		{
 			t_flg = 1;
@@ -703,12 +712,12 @@ void SaveTop()
 				fscanf(fp, "%s %d\n", name, &record);
 				for (k = 0; k < 11; k++)
 				{
-					if (name[0] == '.' && name[1] == '.' && name[2] == '.' && name[3] == '\0')
+					if ((name[0] == '.' && name[1] == '.' && name[2] == '.' && name[3] == '\0') || (name[0] == '.' && name[1] == '.' && name[2] == '\0'))
 					{
 						rank_name[i][j][0] = ' ';
 						rank_name[i][j][1] = ' ';
 						rank_name[i][j][2] = '\0';
-						break; //이름이 0.0 디폴트 값으로 되어있으면 배열에 "  "으로 저장한다
+						break; //이름이 ... 디폴트 값으로 되어있으면 배열에 "  "으로 저장한다
 					}
 					if (name[k] == '\0')
 					{
@@ -804,12 +813,12 @@ void Top(int Top_num)
 				fscanf(fp, "%s %d\n", &name, &record);
 				for (k = 0; k < 11; k++)
 				{
-					if (name[0] == '.' && name[1] == '.' && name[2] == '.')
+					if ((name[0] == '.' && name[1] == '.' && name[2] == '.') || (name[0] == '.' && name[1] == '.'))
 					{
 						rank_name[i][j][0] = ' ';
 						rank_name[i][j][1] = ' ';
 						rank_name[i][j][2] = '\0';
-						break; //이름이 0.0 디폴트 값으로 되어있으면 배열에 "  "으로 저장한다
+						break; //이름이 ... 디폴트 값으로 되어있으면 배열에 "  "으로 저장한다
 					}
 					if (name[k] == '\0')
 					{
@@ -836,7 +845,7 @@ void Top(int Top_num)
 		{
 			for (i = 0; i < STAGE; i++)
 			{
-				printf("map %d\n\n", i + 1);
+				printf("map %d\n", i + 1);
 				for (j = 0; j < 5; j++)
 				{
 					for (k = 0; k < 11; k++)
@@ -864,7 +873,7 @@ void Top(int Top_num)
 		if (Top_num != 0)
 		{
 			i = Top_num - 1;
-			printf("map %d\n\n", i + 1);
+			printf("map %d\n", i + 1);
 			for (j = 0; j < 5; j++)
 			{
 				for (k = 0; k < 11; k++)
@@ -901,9 +910,11 @@ void Top(int Top_num)
 
 void Display()
 {
+	clearMap();
 	while (1)
 	{
 		clearMap();
+		printf("\tHello %s\n", usrName);
 		printf("h : 왼쪽으로 이동, j : 아래로 이동, k : 위로 이동, l : 오른쪽으로 이동\n");
 		printf("u : 움직이기 전 상태로 이동한다. (최대 5번 가능)\n");
 		printf("r : 현재 맵을 처음부터 다시시작한다.\n");

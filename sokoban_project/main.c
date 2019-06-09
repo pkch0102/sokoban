@@ -31,9 +31,9 @@ void Undo();//undo기능
 void SaveTop();//ranking.txt에서 데이터를 읽어와 rank_cnt와 rank_name 업데이트 및 다시 ranking.txt업데이트
 void New();//1스테이지 부터 시작
 void Replay();//스테이지 다시시작
-void Option(char key);//움직임이외에 커맨드 제어
+void Other_Command(char key);//움직임이외에 커맨드 제어
 bool StageClear();//스테이지를 클리어 했는가
-void Display();//display help기능
+void Display_help();//display help기능
 void Top(int Top_num);//순위를 보여준다
 int getch(void);//커맨드 입력
 
@@ -118,7 +118,7 @@ void get_map() {
 			box_count[stage]++;
 		}
 
-		// O 개수 카운트
+		// 창고 개수 카운트
 		if (ch == 'O')
 		{
 			goal_count[stage]++;
@@ -157,7 +157,7 @@ void get_map() {
 	{
 		if (box_count[i] != goal_count[i])
 		{
-			printf("ERROR : 박스 개수와 도착 지점의 개수가 다릅니다.\n");
+			printf("박스 개수와 도착 지점의 개수가 다릅니다.\n");
 			return;
 		}
 	}
@@ -174,7 +174,7 @@ void show_Map()
 {
 	StageClear();
 
-	printf("    Hello %s\n\n", usrName);
+	printf("\tHello %s\n\n", usrName);
 
 	// 맵 출력
 	for (int i = 0; i < Y; i++)
@@ -185,10 +185,12 @@ void show_Map()
 		}
 		printf("\n");
 	}
-	if(master_key != 't' || master_key != ' ')
-	printf("(Command) %c\n",master_key);
+	if (master_key == 'd' || master_key == 'u' || master_key == 'e')
+	printf("(Command) %c",master_key);
+	else if(master_key == 't')
+		printf("(Command)")
 	else {
-		printf("(Command)\n");
+		printf("(Command) \n");
 	}
 	master_key = ' ';
 }
@@ -313,11 +315,11 @@ void get_name()
 	while (1)
 	{
 		flag = true;
-		length = 0;
+		len = 0;
 		printf("input name : ");
 		scanf("%s", usrName);
 
-		// username[i]의 값이 영문자 혹은 '\0'의 값이 아닐 경우
+		// usrName[i]의 값이 영문자 혹은 '\0'의 값이 아닐 경우
 		for (int i = 0; i < 11; i++)
 		{
 			if (!(('a' <= usrName[i] && usrName[i] <= 'z') || ('A' <= usrName[i] && usrName[i] <= 'Z')) && (usrName[i] != '\0'))
@@ -329,13 +331,13 @@ void get_name()
 				break;
 		}
 
-		// username[length]의 값이 '\0'일 때까지 반복
-		while (usrName[length] != '\0')
+		// usrName[len]의 값이 '\0'일 때까지 반복
+		while (usrName[len] != '\0')
 		{
-			if (length > 9) // usrName의 글자가 10문자 초과했을 경우
+			if (len > 9) // usrName의 글자가 10문자 초과했을 경우
 				flag = false;
 
-			length++;
+			len++;
 		}
 
 		if (flag)
@@ -357,11 +359,11 @@ void Move()
 	key = getch();
 	clearMap();
 	show_Map();
-	// h, j, k, l 이외의 명령이 들어올 경우 Option() 함수를 통하여 입력받음
+	// h, j, k, l 이외의 명령이 들어올 경우 Other_Command() 함수를 통하여 입력받음
 	if (((((((key != 'h' && key != 'j') && key != 'k') && key != 'l') && key != 'H') && key != 'J') && key != 'K') && key != 'L')
 	{
 		master_key = key;
-		Option(key);
+		Other_Command(key);
 		return;
 	}
 	switch (key)
@@ -397,7 +399,7 @@ void Move()
 		dx = 0; // 움직이지 않음
 		dy = 0;
 	}
-	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == '$') // '$'상자를 만난다면
+	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == '$') // '$'상자를 만나면
 	{
 		if (map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == ' ') // 그 앞이 공백이라면
 		{
@@ -441,7 +443,7 @@ void Move()
 
 	if (!(dx == 0 && dy == 0)) // 움직임이 있다면
 	{
-		move_cnt++; // move_count를 올린다
+		move_cnt++; // move_cnt를 올린다
 	}
 }
 
@@ -503,7 +505,7 @@ void Undo()
 			}
 		}
 	}
-
+	move_cnt++//움직임 횟수 증가
 	player_y[stage] = undo_y; // 플레이어 y좌표 조정
 	player_x[stage] = undo_x; // 플레이어 x좌표 조정
 }
@@ -560,7 +562,7 @@ bool StageClear()
 	return flag;
 }
 
-void Option(char key)
+void Other_Command(char key)
 {
 	char enter;
 	int Top_i;
@@ -585,7 +587,7 @@ void Option(char key)
 		if (d_flg == 0)
 		{
 			d_flg = 1;
-			Display();
+			Display_help();
 		}
 		break;
 
@@ -869,6 +871,7 @@ void Top(int Top_num)
 					printf("\n");
 				}
 			}
+			printf("\n\n(Command) t");
 		}
 		if (Top_num != 0)
 		{
@@ -896,8 +899,9 @@ void Top(int Top_num)
 				}
 				printf("\n");
 			}
+			printf("\n\n(Command) t %d",i + 1);
 		}
-		printf("나가려면 엔터키를 누르시오."); //출력후 들어온 상태면서 t,T 를 누를경우 빠져나간다.
+		printf("\n나가려면 엔터키를 누르시오."); //출력후 들어온 상태면서 t,T 를 누를경우 빠져나간다.
 		if (getch() == '\n' && t_flg == 1)
 		{
 			t_flg = 0;
@@ -908,7 +912,7 @@ void Top(int Top_num)
 
 }
 
-void Display()
+void Display_help()
 {
 	clearMap();
 	while (1)
@@ -925,6 +929,7 @@ void Display()
 		printf("d : 명령내용을 보여준다.\n");
 		printf("t : 게임 순위를 보여준다.\n");
 		printf("나가려면 엔터키를 누르시오.\n");
+		printf("\n\n(Command) d");
 		if (getch() == '\n' & d_flg == 1)
 		{
 			d_flg = 0;

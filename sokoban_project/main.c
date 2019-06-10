@@ -4,48 +4,49 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-#define Y 30 // ¸Ê ÃÖ´ë Y °ª
-#define X 30 // ¸Ê ÃÖ´ë X °ª
-#define STAGE 5 // ÃÖ´ë ½ºÅ×ÀÌÁö °ª
+#define Y 30 // ë§µ ìµœëŒ€ Y ê°’
+#define X 30 // ë§µ ìµœëŒ€ X ê°’
+#define STAGE 5 // ìµœëŒ€ ìŠ¤í…Œì´ì§€ ê°’
 
-char data_map[STAGE][31][31], undo_map[STAGE][31][31], map[STAGE][31][31];//¿ŞÂÊºÎÅÍ ÆÄÀÏ¿¡¼­ ¸ÊÀ» ¹Ş¾Æ¿Í¼­ ÀúÀåÇÏ´Â ¹è¿­, undo¸¦ »ç¿ëÇÒ¶§ ¾µ ¹è¿­, °ÔÀÓÇÃ·¹ÀÌ¿¡ °ü¿©ÇÒ ¹è¿­
-char usrName[11], rank_name[STAGE][5][11];//À¯ÀúÀÇ ÀÌ¸§, ¼øÀ§±Ç ÇÃ·¹ÀÌ¾îÀÇ ÀÌ¸§
+char data_map[STAGE][31][31], undo_map[STAGE][31][31], map[STAGE][31][31];//ì™¼ìª½ë¶€í„° íŒŒì¼ì—ì„œ ë§µì„ ë°›ì•„ì™€ì„œ ì €ì¥í•˜ëŠ” ë°°ì—´, undoë¥¼ ì‚¬ìš©í• ë•Œ ì“¸ ë°°ì—´, ê²Œì„í”Œë ˆì´ì— ê´€ì—¬í•  ë°°ì—´
+char usrName[11], rank_name[STAGE][5][11];//ìœ ì €ì˜ ì´ë¦„, ìˆœìœ„ê¶Œ í”Œë ˆì´ì–´ì˜ ì´ë¦„
 int maxi[5];
 int maxj[5];
-int goal_loc[5][5][5], rank_cnt[STAGE][5];//½ºÅ×ÀÌÁöº° Ã¢°íÀÇ À§Ä¡, ¼øÀ§±ÇÇÃ·¹ÀÌ¾îÀÇ Á¡¼ö
-int box_count[STAGE], goal_count[STAGE];//±İÀÇ °³¼ö¿Í Ã¢°íÀÇ °³¼ö
-int stage = -1, undo_cnt = 5, move_cnt = 0, save_cnt = 0;//½ºÅ×ÀÌÁö ÃÊ±â °ª,  ¾ó¸¶³ª undo¸¦ ¸¹ÀÌ Çß´Â°¡, ¿òÁ÷ÀÎ È½¼ö, undo¸Ê ÀúÀå È½¼ö
-int player_x[5], player_y[5], origin_player_x[5], origin_player_y[5];//ÇöÀç ÇÃ·¹ÀÌ¾îÀÇ ÁÂÇ¥¿Í ÃÊ±â ÇÃ·¹ÀÌ¾îÀÇ ÁÂÇ¥
-int d_flg, t_flg, record;//dispaly±â´ÉÀÌ ½ÇÇàµÇ°í ÀÖ´Â°¡, top±â´ÉÀÌ ½ÇÇàµÇ°í ÀÖ´Â°¡, ¼øÀ§±Ç ÇÃ·¹ÀÌ¾îÀÇ Á¡¼ö¸¦ ¹Ş¾Æ¿Ã ¶§ ÇÊ¿äÇÑ ÀÓ½Ã º¯¼ö
-int master_key;//ÀÔ·ÂÇÑ Ä¿¸Çµå Ãâ·Â¿¡ ÇÊ¿äÇÑ º¯¼ö
+int goal_loc[5][5][5], rank_cnt[STAGE][5];//ìŠ¤í…Œì´ì§€ë³„ ì°½ê³ ì˜ ìœ„ì¹˜, ìˆœìœ„ê¶Œí”Œë ˆì´ì–´ì˜ ì ìˆ˜
+int box_count[STAGE], goal_count[STAGE];//ê¸ˆì˜ ê°œìˆ˜ì™€ ì°½ê³ ì˜ ê°œìˆ˜
+int stage = -1, undo_cnt = 5, move_cnt = 0, save_cnt = 0;//ìŠ¤í…Œì´ì§€ ì´ˆê¸° ê°’,  ì–¼ë§ˆë‚˜ undoë¥¼ ë§ì´ í–ˆëŠ”ê°€, ì›€ì§ì¸ íšŸìˆ˜, undoë§µ ì €ì¥ íšŸìˆ˜
+int player_x[5], player_y[5], origin_player_x[5], origin_player_y[5];//í˜„ì¬ í”Œë ˆì´ì–´ì˜ ì¢Œí‘œì™€ ì´ˆê¸° í”Œë ˆì´ì–´ì˜ ì¢Œí‘œ
+int d_flg, t_flg, record;//dispalyê¸°ëŠ¥ì´ ì‹¤í–‰ë˜ê³  ìˆëŠ”ê°€, topê¸°ëŠ¥ì´ ì‹¤í–‰ë˜ê³  ìˆëŠ”ê°€, ìˆœìœ„ê¶Œ í”Œë ˆì´ì–´ì˜ ì ìˆ˜ë¥¼ ë°›ì•„ì˜¬ ë•Œ í•„ìš”í•œ ì„ì‹œ ë³€ìˆ˜
+int master_key;//ì…ë ¥í•œ ì»¤ë§¨ë“œ ì¶œë ¥ì— í•„ìš”í•œ ë³€ìˆ˜
 
-void get_map();//¸Ê ÆÄÀÏ ÀĞ¾î¿À±â
-void show_Map();//¸Ê º¸¿©ÁÖ±â
-void clearMap();//È­¸é »èÁ¦
-void save();//¸Ê ÀúÀå ±â´É
-void FileLoad();//ÀúÀåµÈ ¸Ê ºÒ·¯¿À±â
-void Move();//ÇÃ·¹ÀÌ¾îÀÇ ¿òÁ÷ÀÓ
-void get_name();//À¯ÀúÀÇ ÀÌ¸§ ¹Ş±â
-void set_undo();//undo¸Ê ¾÷µ¥ÀÌÆ®
-void Undo();//undo±â´É
-void SaveTop();//ranking.txt¿¡¼­ µ¥ÀÌÅÍ¸¦ ÀĞ¾î¿Í rank_cnt¿Í rank_name ¾÷µ¥ÀÌÆ® ¹× ´Ù½Ã ranking.txt¾÷µ¥ÀÌÆ®
-void New();//1½ºÅ×ÀÌÁö ºÎÅÍ ½ÃÀÛ
-void Replay();//½ºÅ×ÀÌÁö ´Ù½Ã½ÃÀÛ
-void Other_Command(char key);//¿òÁ÷ÀÓÀÌ¿Ü¿¡ Ä¿¸Çµå Á¦¾î
-bool StageClear();//½ºÅ×ÀÌÁö¸¦ Å¬¸®¾î Çß´Â°¡
-void Display_help();//display help±â´É
-void Top(int Top_num);//¼øÀ§¸¦ º¸¿©ÁØ´Ù
-int getch(void);//Ä¿¸Çµå ÀÔ·Â
+int max_stage = 0;
+void get_map();//ë§µ íŒŒì¼ ì½ì–´ì˜¤ê¸°
+void show_Map();//ë§µ ë³´ì—¬ì£¼ê¸°
+void clearMap();//í™”ë©´ ì‚­ì œ
+void save();//ë§µ ì €ì¥ ê¸°ëŠ¥
+void FileLoad();//ì €ì¥ëœ ë§µ ë¶ˆëŸ¬ì˜¤ê¸°
+void Move();//í”Œë ˆì´ì–´ì˜ ì›€ì§ì„
+void get_name();//ìœ ì €ì˜ ì´ë¦„ ë°›ê¸°
+void set_undo();//undoë§µ ì—…ë°ì´íŠ¸
+void Undo();//undoê¸°ëŠ¥
+void SaveTop();//ranking.txtì—ì„œ ë°ì´í„°ë¥¼ ì½ì–´ì™€ rank_cntì™€ rank_name ì—…ë°ì´íŠ¸ ë° ë‹¤ì‹œ ranking.txtì—…ë°ì´íŠ¸
+void New();//1ìŠ¤í…Œì´ì§€ ë¶€í„° ì‹œì‘
+void Replay();//ìŠ¤í…Œì´ì§€ ë‹¤ì‹œì‹œì‘
+void Other_Command(char key);//ì›€ì§ì„ì´ì™¸ì— ì»¤ë§¨ë“œ ì œì–´
+bool StageClear();//ìŠ¤í…Œì´ì§€ë¥¼ í´ë¦¬ì–´ í–ˆëŠ”ê°€
+void Display_help();//display helpê¸°ëŠ¥
+void Top(int Top_num);//ìˆœìœ„ë¥¼ ë³´ì—¬ì¤€ë‹¤
+int getch(void);//ì»¤ë§¨ë“œ ì…ë ¥
 
 int main()
 {
 
-	// ÀÌ¸§ ÀÔ·Â
+	// ì´ë¦„ ì…ë ¥
 	get_name();
-	// ¸Ê ·Îµå
+	// ë§µ ë¡œë“œ
 	get_map();
 
-	// °ÔÀÓ ÁøÇà
+	// ê²Œì„ ì§„í–‰
 	while (1)
 	{
 		clearMap();
@@ -87,16 +88,17 @@ void get_map() {
 
 	while ((fscanf(fp, "%c", &ch)) != EOF)
 	{
-		// ¼ıÀÚ ÀÏ¶§ »õ·Î¿î ½ºÅ×ÀÌÁö
+		// ìˆ«ì ì¼ë•Œ ìƒˆë¡œìš´ ìŠ¤í…Œì´ì§€
 		if (ch <= '5'&& ch >= '1')
 		{
 			stage++;
 			y = -1;
 			continue;
 		}
-		// e ÀÏ¶§ Á¾·á
+		// e ì¼ë•Œ ì¢…ë£Œ
 		if (ch == 'e')
 		{
+			max_stage = stage;
 			break;
 		}
 
@@ -112,13 +114,13 @@ void get_map() {
 
 		}
 
-		// »óÀÚ °³¼ö Ä«¿îÆ®
+		// ìƒì ê°œìˆ˜ ì¹´ìš´íŠ¸
 		if (ch == '$')
 		{
 			box_count[stage]++;
 		}
 
-		// Ã¢°í °³¼ö Ä«¿îÆ®
+		// ì°½ê³  ê°œìˆ˜ ì¹´ìš´íŠ¸
 		if (ch == 'O')
 		{
 			goal_count[stage]++;
@@ -129,7 +131,7 @@ void get_map() {
 			y++;
 			x = 0;
 		}
-		// ¸Ê ÀúÀå
+		// ë§µ ì €ì¥
 		else
 		{
 			if (ch == '.') {
@@ -140,8 +142,8 @@ void get_map() {
 			x++;
 		}
 	}
-	// ÃÊ±â ¸Ê ÀúÀå
-	for (int i = 0; i < STAGE; i++)
+	// ì´ˆê¸° ë§µ ì €ì¥
+	for (int i = 0; i < max_stage; i++)
 	{
 		for (int j = 0; j < Y; j++)
 		{
@@ -152,17 +154,17 @@ void get_map() {
 		}
 	}
 
-	// $°³¼ö¿Í O°³¼ö°¡ ´Ù¸£¸é Á¾·á
-	for (int i = 0; i < STAGE; i++)
+	// $ê°œìˆ˜ì™€ Oê°œìˆ˜ê°€ ë‹¤ë¥´ë©´ ì¢…ë£Œ
+	for (int i = 0; i < max_stage; i++)
 	{
 		if (box_count[i] != goal_count[i])
 		{
-			printf("¹Ú½º °³¼ö¿Í µµÂø ÁöÁ¡ÀÇ °³¼ö°¡ ´Ù¸¨´Ï´Ù.\n");
+			printf("ë°•ìŠ¤ ê°œìˆ˜ì™€ ë„ì°© ì§€ì ì˜ ê°œìˆ˜ê°€ ë‹¤ë¦…ë‹ˆë‹¤.\n");
 			return;
 		}
 	}
 
-	// ½ºÅ×ÀÌÁö ÃÊ±â °ª
+	// ìŠ¤í…Œì´ì§€ ì´ˆê¸° ê°’
 	stage = 0;
 
 	fclose(fp);
@@ -176,7 +178,7 @@ void show_Map()
 
 	printf("\tHello %s\n\n", usrName);
 
-	// ¸Ê Ãâ·Â
+	// ë§µ ì¶œë ¥
 	for (int i = 0; i < Y; i++)
 	{
 		for (int j = 0; j < X; j++)
@@ -208,17 +210,17 @@ void save()
 	FILE *save;
 	int i;
 
-	// sokoban.txt¸¦ w ¸ğµå·Î ¿­±â
+	// sokoban.txtë¥¼ w ëª¨ë“œë¡œ ì—´ê¸°
 	save = fopen("sokoban.txt", "w");
 
-	// username, stage, move_countÀúÀå
+	// username, stage, move_countì €ì¥
 	fprintf(save, "%s\n", usrName);
 	fprintf(save, "%d\n", stage);
 	fprintf(save, "%d\n", move_cnt);
 	fprintf(save, "%d\n", undo_cnt);
 
 	i = stage;
-	// ÇöÀç map »óÅÂ ÀúÀå
+	// í˜„ì¬ map ìƒíƒœ ì €ì¥
 	for (int j = 0; j < Y; j++)
 	{
 		for (int k = 0; k < X; k++)
@@ -241,9 +243,9 @@ void FileLoad()
 	int load_x = 0, load_y = 0, load_z;
 	int line = 0;
 
-	// sokoban.txt¸¦ r ¸ğµå·Î ¿­±â
+	// sokoban.txtë¥¼ r ëª¨ë“œë¡œ ì—´ê¸°
 	fileload = fopen("sokoban.txt", "r");
-	// ·ÎµåÇÑ ÆÄÀÏÀÌ ºó ÆÄÀÏÀÏ °æ¿ì, ÇÁ·Î±×·¥ Á¾·áÇÏ±â
+	// ë¡œë“œí•œ íŒŒì¼ì´ ë¹ˆ íŒŒì¼ì¼ ê²½ìš°, í”„ë¡œê·¸ë¨ ì¢…ë£Œí•˜ê¸°
 	if (fileload == NULL)
 	{
 		printf("\n\n\nLoad File Doesn't Exist.\n\n");
@@ -255,25 +257,25 @@ void FileLoad()
 	fscanf(fileload, "%d\n%d\n%d", &stage, &move_cnt, &undo_cnt);
 	fscanf(fileload, "%c", &ch);
 
-	// ÆÄÀÏÀÇ ³¡ºÎºĞ±îÁö ÆÄÀÏ¿¡ ÀÖ´Â ³»¿ë ÀĞ±â
+	// íŒŒì¼ì˜ ëë¶€ë¶„ê¹Œì§€ íŒŒì¼ì— ìˆëŠ” ë‚´ìš© ì½ê¸°
 	while (fscanf(fileload, "%c", &ch) != EOF)
 	{
-		// ch°¡ '\n' °³ÇàÀÏ °æ¿ì, xÁÂÇ¥ 0À¸·Î ÃÊ±âÈ­, line°ú yÁÂÇ¥ 1¾¿ Áõ°¡
+		// chê°€ '\n' ê°œí–‰ì¼ ê²½ìš°, xì¢Œí‘œ 0ìœ¼ë¡œ ì´ˆê¸°í™”, lineê³¼ yì¢Œí‘œ 1ì”© ì¦ê°€
 		if (ch == '\n')
 		{
 			line++;
 			load_x = 0;
 			load_y++;
 		}
-		// ÁÂÇ¥ ÃÊ±âÈ­ÇÏ°í ÀúÀå½ÃÅ² Undo ¸ÊÀ» ÀĞÁö ¾Ê±â À§ÇØ ¸ØÃß±â
-		// ÀĞ¾îµéÀÎ ¹®ÀÚ¸¦ ´ëÀÔÇÏ°í xÁÂÇ¥ 1¾¿ Áõ°¡
+		// ì¢Œí‘œ ì´ˆê¸°í™”í•˜ê³  ì €ì¥ì‹œí‚¨ Undo ë§µì„ ì½ì§€ ì•Šê¸° ìœ„í•´ ë©ˆì¶”ê¸°
+		// ì½ì–´ë“¤ì¸ ë¬¸ìë¥¼ ëŒ€ì…í•˜ê³  xì¢Œí‘œ 1ì”© ì¦ê°€
 		else
 		{
 			map[stage][load_y][load_x] = ch;
 			load_x++;
 		}
 
-		// ÇÃ·¹ÀÌ¾î À§Ä¡ ÁÂÇ¥
+		// í”Œë ˆì´ì–´ ìœ„ì¹˜ ì¢Œí‘œ
 		if (ch == '@')
 		{
 			player_x[stage] = load_x - 1;
@@ -306,7 +308,7 @@ void get_name()
 
 	printf("Start....\n");
 
-	// usrName[i]¸¦ °ø¹éÀ¸·Î ÃÊ±âÈ­
+	// usrName[i]ë¥¼ ê³µë°±ìœ¼ë¡œ ì´ˆê¸°í™”
 	for (int i = 0; i < 11; i++)
 	{
 		usrName[i] = ' ';
@@ -319,7 +321,7 @@ void get_name()
 		printf("input name : ");
 		scanf("%s", usrName);
 
-		// usrName[i]ÀÇ °ªÀÌ ¿µ¹®ÀÚ È¤Àº '\0'ÀÇ °ªÀÌ ¾Æ´Ò °æ¿ì
+		// usrName[i]ì˜ ê°’ì´ ì˜ë¬¸ì í˜¹ì€ '\0'ì˜ ê°’ì´ ì•„ë‹ ê²½ìš°
 		for (int i = 0; i < 11; i++)
 		{
 			if (!(('a' <= usrName[i] && usrName[i] <= 'z') || ('A' <= usrName[i] && usrName[i] <= 'Z')) && (usrName[i] != '\0'))
@@ -331,10 +333,10 @@ void get_name()
 				break;
 		}
 
-		// usrName[len]ÀÇ °ªÀÌ '\0'ÀÏ ¶§±îÁö ¹İº¹
+		// usrName[len]ì˜ ê°’ì´ '\0'ì¼ ë•Œê¹Œì§€ ë°˜ë³µ
 		while (usrName[len] != '\0')
 		{
-			if (len > 9) // usrNameÀÇ ±ÛÀÚ°¡ 10¹®ÀÚ ÃÊ°úÇßÀ» °æ¿ì
+			if (len > 9) // usrNameì˜ ê¸€ìê°€ 10ë¬¸ì ì´ˆê³¼í–ˆì„ ê²½ìš°
 				flag = false;
 
 			len++;
@@ -355,11 +357,11 @@ void Move()
 	char key = ' ';
 	int dx = 0, dy = 0;
 
-	// Å° ÀÔ·Â
+	// í‚¤ ì…ë ¥
 	key = getch();
 	clearMap();
 	show_Map();
-	// h, j, k, l ÀÌ¿ÜÀÇ ¸í·ÉÀÌ µé¾î¿Ã °æ¿ì Other_Command() ÇÔ¼ö¸¦ ÅëÇÏ¿© ÀÔ·Â¹ŞÀ½
+	// h, j, k, l ì´ì™¸ì˜ ëª…ë ¹ì´ ë“¤ì–´ì˜¬ ê²½ìš° Other_Command() í•¨ìˆ˜ë¥¼ í†µí•˜ì—¬ ì…ë ¥ë°›ìŒ
 	if (((((((key != 'h' && key != 'j') && key != 'k') && key != 'l') && key != 'H') && key != 'J') && key != 'K') && key != 'L')
 	{
 		master_key = key;
@@ -368,89 +370,89 @@ void Move()
 	}
 	switch (key)
 	{
-		//  ¿ŞÂÊ ÀÌµ¿
+		//  ì™¼ìª½ ì´ë™
 	case 'h':
 	case 'H':
 		dx = -1;
 		break;
 
-		// ¾Æ·¡ÂÊ ÀÌµ¿
+		// ì•„ë˜ìª½ ì´ë™
 	case 'j':
 	case 'J':
 		dy = 1;
 		break;
 
-		// À§ÂÊ ÀÌµ¿
+		// ìœ„ìª½ ì´ë™
 	case 'k':
 	case 'K':
 		dy = -1;
 		break;
 
-		// ¿À¸¥ÂÊ ÀÌµ¿
+		// ì˜¤ë¥¸ìª½ ì´ë™
 	case 'l':
 	case 'L':
 		dx = 1;
 		break;
 	}
 	
-	// Ãæµ¹ Ã¼Å©
-	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == '#') // ¾Õ¿¡ '#'º®ÀÌ ÀÖÀ¸¸é
+	// ì¶©ëŒ ì²´í¬
+	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == '#') // ì•ì— '#'ë²½ì´ ìˆìœ¼ë©´
 	{
-		dx = 0; // ¿òÁ÷ÀÌÁö ¾ÊÀ½
+		dx = 0; // ì›€ì§ì´ì§€ ì•ŠìŒ
 		dy = 0;
 	}
-	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == '$') // '$'»óÀÚ¸¦ ¸¸³ª¸é
+	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == '$') // '$'ìƒìë¥¼ ë§Œë‚˜ë©´
 	{
-		if (map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == ' ') // ±× ¾ÕÀÌ °ø¹éÀÌ¶ó¸é
+		if (map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == ' ') // ê·¸ ì•ì´ ê³µë°±ì´ë¼ë©´
 		{
-			set_undo(); // ¾ğµÎ ¸Ê ÀúÀå
-			map[stage][player_y[stage] + dy][player_x[stage] + dx] = '@'; // ¿òÁ÷ÀÎ ÈÄ ÇÃ·¹ÀÌ¾î ÁÂÇ¥ ÀúÀå
-			map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] = '$'; // ¿òÁ÷ÀÎ ÈÄ »óÀÚ ÁÂÇ¥ ÀúÀå
+			set_undo(); // ì–¸ë‘ ë§µ ì €ì¥
+			map[stage][player_y[stage] + dy][player_x[stage] + dx] = '@'; // ì›€ì§ì¸ í›„ í”Œë ˆì´ì–´ ì¢Œí‘œ ì €ì¥
+			map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] = '$'; // ì›€ì§ì¸ í›„ ìƒì ì¢Œí‘œ ì €ì¥
 		}
-		else if (map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == '#' || map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == '$') // ÇÃ·¹ÀÌ¾î°¡ »óÀÚ¸¦ ¹Ğ°í ÀÖÀ»¶§ »óÀÚ ¾ÕÀÌ # ÀÌ°Å³ª $ ÀÌ¶ó¸é
+		else if (map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == '#' || map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == '$') // í”Œë ˆì´ì–´ê°€ ìƒìë¥¼ ë°€ê³  ìˆì„ë•Œ ìƒì ì•ì´ # ì´ê±°ë‚˜ $ ì´ë¼ë©´
 		{
-			dx = 0; // ¿òÁ÷ÀÌÁö ¾ÊÀ½
+			dx = 0; // ì›€ì§ì´ì§€ ì•ŠìŒ
 			dy = 0;
 		}
 	}
 
-	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == ' ') // ÇÃ·¹ÀÌ¾î°¡ ¿òÁ÷ÀÎ´Ù¸é
+	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == ' ') // í”Œë ˆì´ì–´ê°€ ì›€ì§ì¸ë‹¤ë©´
 	{
-		set_undo(); // ¾ğµÎ ¸Ê ÀúÀå
+		set_undo(); // ì–¸ë‘ ë§µ ì €ì¥
 	}
 
-	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == 'O') // 'O'¸¦ ¸¸³­´Ù¸é
+	if (map[stage][player_y[stage] + dy][player_x[stage] + dx] == 'O') // 'O'ë¥¼ ë§Œë‚œë‹¤ë©´
 	{
-		set_undo(); // ¾ğµÎ ¸Ê ÀúÀå
+		set_undo(); // ì–¸ë‘ ë§µ ì €ì¥
 	}
 
-	if (map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == 'O' &&map[stage][player_y[stage] + dy][player_x[stage] + dx] == '$') // »óÀÚ¸¦ ¹Ğ°í ÀÖ°í, »óÀÚ ¾Õ¿¡ 'O'°¡ ÀÖ´Ù¸é
+	if (map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] == 'O' &&map[stage][player_y[stage] + dy][player_x[stage] + dx] == '$') // ìƒìë¥¼ ë°€ê³  ìˆê³ , ìƒì ì•ì— 'O'ê°€ ìˆë‹¤ë©´
 	{
-		set_undo(); // ¾ğµÎ ¸Ê ÀúÀå
-		map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] = '$'; // »óÀÚ¸¦ ¾ÕÀ¸·Î ¿òÁ÷ÀÓ
+		set_undo(); // ì–¸ë‘ ë§µ ì €ì¥
+		map[stage][player_y[stage] + 2 * dy][player_x[stage] + 2 * dx] = '$'; // ìƒìë¥¼ ì•ìœ¼ë¡œ ì›€ì§ì„
 	}
 
-	map[stage][player_y[stage]][player_x[stage]] = ' '; // ÇÃ·¹ÀÌ¾îÀÇ Àü À§Ä¡¸¦ Áö¿öÁÜ
+	map[stage][player_y[stage]][player_x[stage]] = ' '; // í”Œë ˆì´ì–´ì˜ ì „ ìœ„ì¹˜ë¥¼ ì§€ì›Œì¤Œ
 
-	if (data_map[stage][player_y[stage]][player_x[stage]] == 'O') // ¿ø·¡ ¸Ê¿¡¼­ 'O'¿´À¸¸é
+	if (data_map[stage][player_y[stage]][player_x[stage]] == 'O') // ì›ë˜ ë§µì—ì„œ 'O'ì˜€ìœ¼ë©´
 	{
-		map[stage][player_y[stage]][player_x[stage]] = 'O'; // 'O' °è¼Ó À¯Áö
+		map[stage][player_y[stage]][player_x[stage]] = 'O'; // 'O' ê³„ì† ìœ ì§€
 	}
 
-	player_x[stage] += dx; // ÇÃ·¹ÀÌ¾î ÁÂÇ¥ ¼³Á¤
-	player_y[stage] += dy; // ÇÃ·¹ÀÌ¾î ÁÂÇ¥ ¼³Á¤
-	map[stage][player_y[stage]][player_x[stage]] = '@'; // @¿¡ ÇÃ·¹ÀÌ¾î ÁÂÇ¥ ´ëÀÔ
+	player_x[stage] += dx; // í”Œë ˆì´ì–´ ì¢Œí‘œ ì„¤ì •
+	player_y[stage] += dy; // í”Œë ˆì´ì–´ ì¢Œí‘œ ì„¤ì •
+	map[stage][player_y[stage]][player_x[stage]] = '@'; // @ì— í”Œë ˆì´ì–´ ì¢Œí‘œ ëŒ€ì…
 
-	if (!(dx == 0 && dy == 0)) // ¿òÁ÷ÀÓÀÌ ÀÖ´Ù¸é
+	if (!(dx == 0 && dy == 0)) // ì›€ì§ì„ì´ ìˆë‹¤ë©´
 	{
-		move_cnt++; // move_cnt¸¦ ¿Ã¸°´Ù
+		move_cnt++; // move_cntë¥¼ ì˜¬ë¦°ë‹¤
 	}
 }
 
 void set_undo()
 {
 	int i, j, k = 0;
-	// ¾ğµÎ ¸Ê ÀúÀåÈ½¼ö°¡ 5¹øÀÌ ³Ñ¾úÀ»°æ¿ì
+	// ì–¸ë‘ ë§µ ì €ì¥íšŸìˆ˜ê°€ 5ë²ˆì´ ë„˜ì—ˆì„ê²½ìš°
 	if (save_cnt >= 5)
 	{
 		for (i = 1; i < STAGE; i++)
@@ -459,13 +461,13 @@ void set_undo()
 			{
 				for (k = 0; k < X; k++)
 				{
-					undo_map[i - 1][j][k] = undo_map[i][j][k]; // ¸¶Áö¸· ¾ğµÎ ÀúÀå¸ÊÀ» ¹ö¸²
+					undo_map[i - 1][j][k] = undo_map[i][j][k]; // ë§ˆì§€ë§‰ ì–¸ë‘ ì €ì¥ë§µì„ ë²„ë¦¼
 				}
 			}
 		}
 		save_cnt--;
 	}
-	// ¾ğµÎ¸¦ À§ÇÑ ¸Ê ÀúÀå
+	// ì–¸ë‘ë¥¼ ìœ„í•œ ë§µ ì €ì¥
 	for (j = 0; j < Y; j++)
 	{
 		for (k = 0; k < X; k++)
@@ -481,7 +483,7 @@ void Undo()
 	int undo_x = 0, undo_y = 0;
 
 	if ((undo_cnt < 1) || ((5 - undo_cnt) >= move_cnt))
-		return; // ¾ğµÎ Ä«¿îÆ®°¡ 0ÀÌ°Å³ª ¹«ºê Ä«¿îÆ®°¡ 0ÀÎµ¥ ¾ğµÎ °¡´É È½¼ö°¡ ³²¾Æ ÀÖÀ» °æ¿ì ¾ğµÎ¸¦ ½ÇÇàÇÏÁö ¾ÊÀ½
+		return; // ì–¸ë‘ ì¹´ìš´íŠ¸ê°€ 0ì´ê±°ë‚˜ ë¬´ë¸Œ ì¹´ìš´íŠ¸ê°€ 0ì¸ë° ì–¸ë‘ ê°€ëŠ¥ íšŸìˆ˜ê°€ ë‚¨ì•„ ìˆì„ ê²½ìš° ì–¸ë‘ë¥¼ ì‹¤í–‰í•˜ì§€ ì•ŠìŒ
 
 	undo_cnt--;
 	save_cnt--;
@@ -490,10 +492,10 @@ void Undo()
 	{
 		for (int j = 0; j < X; j++)
 		{
-			map[stage][i][j] = undo_map[save_cnt][i][j]; // ÇöÀç ¸ÊÀ» ¾ğµÎ¸Ê¿¡¼­ ÀúÀåÇÑ ¸ÊÀ¸·Î ´ëÃ¼ÇÔ
+			map[stage][i][j] = undo_map[save_cnt][i][j]; // í˜„ì¬ ë§µì„ ì–¸ë‘ë§µì—ì„œ ì €ì¥í•œ ë§µìœ¼ë¡œ ëŒ€ì²´í•¨
 		}
 	}
-	// @ÀÇ ÁÂÇ¥°ªÀ» ÀúÀåÇÔ
+	// @ì˜ ì¢Œí‘œê°’ì„ ì €ì¥í•¨
 	for (int i = 0; i < Y; i++)
 	{
 		for (int j = 0; j < X; j++)
@@ -505,9 +507,9 @@ void Undo()
 			}
 		}
 	}
-	move_cnt++//¿òÁ÷ÀÓ È½¼ö Áõ°¡
-	player_y[stage] = undo_y; // ÇÃ·¹ÀÌ¾î yÁÂÇ¥ Á¶Á¤
-	player_x[stage] = undo_x; // ÇÃ·¹ÀÌ¾î xÁÂÇ¥ Á¶Á¤
+	move_cnt++//ì›€ì§ì„ íšŸìˆ˜ ì¦ê°€
+	player_y[stage] = undo_y; // í”Œë ˆì´ì–´ yì¢Œí‘œ ì¡°ì •
+	player_x[stage] = undo_x; // í”Œë ˆì´ì–´ xì¢Œí‘œ ì¡°ì •
 }
 
 bool StageClear()
@@ -519,29 +521,29 @@ bool StageClear()
 	{
 		for (int x = 0; x < X; x++)
 		{
-			if (data_map[stage][y][x] == 'O' && map[stage][y][x] == '$') // ¿ø·¡ ¸ÊÀÇ OÀÇ ÁÂÇ¥¿Í ÇöÀç ¸ÊÀÇ $ÀÇ ÁÂÇ¥°¡ °°À» °æ¿ì
+			if (data_map[stage][y][x] == 'O' && map[stage][y][x] == '$') // ì›ë˜ ë§µì˜ Oì˜ ì¢Œí‘œì™€ í˜„ì¬ ë§µì˜ $ì˜ ì¢Œí‘œê°€ ê°™ì„ ê²½ìš°
 			{
-				count++; // count°ªÀÌ Áõ°¡
+				count++; // countê°’ì´ ì¦ê°€
 			}
 		}
 	}
 
-	if (count == goal_count[stage]) // count °ªÀÌ ½ºÅ×ÀÌÁö Å¬¸®¾î¸¦ À§ÇÑ °ª°ú °°À» ¶§
+	if (count == goal_count[stage]) // count ê°’ì´ ìŠ¤í…Œì´ì§€ í´ë¦¬ì–´ë¥¼ ìœ„í•œ ê°’ê³¼ ê°™ì„ ë•Œ
 	{
-		SaveTop(); //Á¡¼ö ±â·Ï
-		stage++; // ½ºÅ×ÀÌÁö Áõ°¡
-		flag = true; // flag¿¡ true°ª
-		move_cnt = 0; //Á¡¼ö ÃÊ±âÈ­
+		SaveTop(); //ì ìˆ˜ ê¸°ë¡
+		stage++; // ìŠ¤í…Œì´ì§€ ì¦ê°€
+		flag = true; // flagì— trueê°’
+		move_cnt = 0; //ì ìˆ˜ ì´ˆê¸°í™”
 	}
 
-	if (stage >= 5) // 5½ºÅ×ÀÌÁö ±îÁö Å¬¸®¾îÇÒ °æ¿ì
+	if (stage >= max_stage) // 5ìŠ¤í…Œì´ì§€ ê¹Œì§€ í´ë¦¬ì–´í•  ê²½ìš°
 	{
-		printf("\n\nCongratulations !\n"); // ÃàÇÏ ¹®±¸Àü¼Û
+		printf("\n\nCongratulations !\n"); // ì¶•í•˜ ë¬¸êµ¬ì „ì†¡
 		printf("\nAll Stage Clear !\n\n");
-		exit(0); // ÇÁ·Î±×·¥ Á¾·á
+		exit(0); // í”„ë¡œê·¸ë¨ ì¢…ë£Œ
 	}
 
-	if (flag) // ½ºÅ×ÀÌÁö°¡ ¿Ã¶ó°¡¸é ¾ğµÎÀúÀå¸ÊÀ» ÃÊ±âÈ­½ÃÅ´
+	if (flag) // ìŠ¤í…Œì´ì§€ê°€ ì˜¬ë¼ê°€ë©´ ì–¸ë‘ì €ì¥ë§µì„ ì´ˆê¸°í™”ì‹œí‚´
 	{
 		for (int k = 0; k < STAGE; k++)
 		{
@@ -554,9 +556,9 @@ bool StageClear()
 			}
 		}
 
-		save_cnt = 0; // ½ºÅ×ÀÌÁö°¡ ¿Ã¶ó°¡¸é ¼¼ÀÌºê Ä«¿îÆ® ÃÊ±âÈ­
-		undo_cnt = 5; // ½ºÅ×ÀÌÁö°¡ ¿Ã¶ó°¡¸é  ¾ğµÎ Ä«¿îÆ® ÃÊ±âÈ­
-		move_cnt = 0; // ½ºÅ×ÀÌÁö°¡ ¿Ã¶ó°¡¸é ¹«ºê Ä«¿îÆ® ÃÊ±âÈ­
+		save_cnt = 0; // ìŠ¤í…Œì´ì§€ê°€ ì˜¬ë¼ê°€ë©´ ì„¸ì´ë¸Œ ì¹´ìš´íŠ¸ ì´ˆê¸°í™”
+		undo_cnt = 5; // ìŠ¤í…Œì´ì§€ê°€ ì˜¬ë¼ê°€ë©´  ì–¸ë‘ ì¹´ìš´íŠ¸ ì´ˆê¸°í™”
+		move_cnt = 0; // ìŠ¤í…Œì´ì§€ê°€ ì˜¬ë¼ê°€ë©´ ë¬´ë¸Œ ì¹´ìš´íŠ¸ ì´ˆê¸°í™”
 	}
 
 	return flag;
@@ -567,19 +569,19 @@ void Other_Command(char key)
 	char enter;
 	int Top_i;
 
-	// h(H), j(J), k(K), l(L) ¸¦ Á¦¿ÜÇÑ Å° Ãâ·ÂÇÏ±â
+	// h(H), j(J), k(K), l(L) ë¥¼ ì œì™¸í•œ í‚¤ ì¶œë ¥í•˜ê¸°
 	
 
 	switch (key)
 	{
 	case 's':
 	case 'S':
-		save(); // s(S) Å°¸¦ ´­·¶À» ¶§ Save() ±â´É ½ÇÇà
+		save(); // s(S) í‚¤ë¥¼ ëˆŒë €ì„ ë•Œ Save() ê¸°ëŠ¥ ì‹¤í–‰
 		break;
 
 	case 'f':
 	case 'F':
-		FileLoad(); // f(F) Å°¸¦ ´­·¶À» ¶§ FileLoad() ±â´É ½ÇÇà
+		FileLoad(); // f(F) í‚¤ë¥¼ ëˆŒë €ì„ ë•Œ FileLoad() ê¸°ëŠ¥ ì‹¤í–‰
 		break;
 
 	case 'd':
@@ -611,13 +613,13 @@ void Other_Command(char key)
 		}
 		enter = getch();
 		if (enter == '\n')
-			Top_i = 0; //t¸¸ ÀÔ·ÂÇßÀ»¶§
+			Top_i = 0; //të§Œ ì…ë ¥í–ˆì„ë•Œ
 		else {
 			enter = getch();
 			printf(" ");
 			switch (enter)
 			{
-				// enter °ªÀÌ 1, 2, 3, 4, 5ÀÏ °æ¿ì °¢°¢ÀÇ ½ºÅ×ÀÌÁö Top Ãâ·Â
+				// enter ê°’ì´ 1, 2, 3, 4, 5ì¼ ê²½ìš° ê°ê°ì˜ ìŠ¤í…Œì´ì§€ Top ì¶œë ¥
 			case '1':
 				printf("1");
 				Top_i = 1;
@@ -643,7 +645,7 @@ void Other_Command(char key)
 				Top_i = 5;
 				break;
 
-				// enter °ªÀÌ '\n' °³ÇàÀÏ °æ¿ì ÀüÃ¼ Top Ãâ·Â
+				// enter ê°’ì´ '\n' ê°œí–‰ì¼ ê²½ìš° ì „ì²´ Top ì¶œë ¥
 			case '\n':
 
 				break;
@@ -659,7 +661,7 @@ void Other_Command(char key)
 		{
 			if (Top_i == 0)
 			{
-				Top(0); //¸ÊÀüÃ¼ ·©Å·±â·ÏÀ» º¸¿©ÁÜ
+				Top(0); //ë§µì „ì²´ ë­í‚¹ê¸°ë¡ì„ ë³´ì—¬ì¤Œ
 				break;
 			}
 			if (Top_i == -1)
@@ -668,7 +670,7 @@ void Other_Command(char key)
 			}
 			if (getch() == '\n' && Top_i != 0 && Top_i != -1)
 			{
-				Top(Top_i); //ÇØ´ç ¸ÊÀÇ ·©Å·±â·ÏÀ» º¸¿©ÁÜ
+				Top(Top_i); //í•´ë‹¹ ë§µì˜ ë­í‚¹ê¸°ë¡ì„ ë³´ì—¬ì¤Œ
 				break;
 			}
 		}
@@ -678,12 +680,12 @@ void Other_Command(char key)
 	case 'E':
 		clearMap();
 		printf("\n\n\nSEE YOU %s . . . .\n\n\n", usrName);
-		save(); // °ÔÀÓ Á¾·áÇÏ±â Àü¿¡ ÀúÀåÇÏ±â
+		save(); // ê²Œì„ ì¢…ë£Œí•˜ê¸° ì „ì— ì €ì¥í•˜ê¸°
 		exit(0);
 		break;
 
 	case 'u':
-	case 'U'://u, U °¡ ÀÔ·Â½Ã ¾ğµÎ ±â´É ½ÇÇà
+	case 'U'://u, U ê°€ ì…ë ¥ì‹œ ì–¸ë‘ ê¸°ëŠ¥ ì‹¤í–‰
 		Undo();
 		break;
 
@@ -704,7 +706,7 @@ void SaveTop()
 
 	fp = fopen("ranking.txt", "r");
 
-	//ÀÔ·Â
+	//ì…ë ¥
 	while (1)
 	{
 		for (i = 0; i < STAGE; i++)
@@ -719,7 +721,7 @@ void SaveTop()
 						rank_name[i][j][0] = ' ';
 						rank_name[i][j][1] = ' ';
 						rank_name[i][j][2] = '\0';
-						break; //ÀÌ¸§ÀÌ ... µğÆúÆ® °ªÀ¸·Î µÇ¾îÀÖÀ¸¸é ¹è¿­¿¡ "  "À¸·Î ÀúÀåÇÑ´Ù
+						break; //ì´ë¦„ì´ ... ë””í´íŠ¸ ê°’ìœ¼ë¡œ ë˜ì–´ìˆìœ¼ë©´ ë°°ì—´ì— "  "ìœ¼ë¡œ ì €ì¥í•œë‹¤
 					}
 					if (name[k] == '\0')
 					{
@@ -732,17 +734,17 @@ void SaveTop()
 		}
 		if ((fscanf(fp, "%c", &a)) == EOF)
 		{
-			break; //ÆÄÀÏÀÌ ³¡³ª¸é ´õÀÌ»ó ¹İº¹ÇÏÁö ¾Ê´Â´Ù.
+			break; //íŒŒì¼ì´ ëë‚˜ë©´ ë”ì´ìƒ ë°˜ë³µí•˜ì§€ ì•ŠëŠ”ë‹¤.
 		}
 	}
 
-	//»õ·Î¿î Á¡¼ö °ªÀÌ ÀÔ·ÂµÇ¸é Å©±â¸¦ ºñ±³ÇØ ¹è¿­¿¡ ³Ö´Â´Ù.
+	//ìƒˆë¡œìš´ ì ìˆ˜ ê°’ì´ ì…ë ¥ë˜ë©´ í¬ê¸°ë¥¼ ë¹„êµí•´ ë°°ì—´ì— ë„£ëŠ”ë‹¤.
 	for (i = 0; i < 4; i++)
 	{
-		//»õ·Î¿î Á¡¼ö°ªÀÌ 0~3¹ø¤Š Á¡¼öµé »çÀÌ¿¡ µé¾î°¡°Å³ª 0À»Á¦¿ÜÇÑ °ªÁß °¡Àå Å¬¶§
+		//ìƒˆë¡œìš´ ì ìˆ˜ê°’ì´ 0~3ë²ˆÂŠ ì ìˆ˜ë“¤ ì‚¬ì´ì— ë“¤ì–´ê°€ê±°ë‚˜ 0ì„ì œì™¸í•œ ê°’ì¤‘ ê°€ì¥ í´ë•Œ
 		if (rank_cnt[stage][i] > move_cnt || rank_cnt[stage][i] == 0)
 		{
-			//»õ·Î¿î Á¡¼ö°ªÀÌ µé¾î°¥ÀÚ¸®¸¦ ºñ¿ì±â À§ÇØ µÚ·Î °ªÀ» ¹Ì·é´Ù
+			//ìƒˆë¡œìš´ ì ìˆ˜ê°’ì´ ë“¤ì–´ê°ˆìë¦¬ë¥¼ ë¹„ìš°ê¸° ìœ„í•´ ë’¤ë¡œ ê°’ì„ ë¯¸ë£¬ë‹¤
 			for (j = 0; j < 4 - i; j++)
 			{
 				rank_cnt[stage][4 - j] = rank_cnt[stage][3 - j];
@@ -751,7 +753,7 @@ void SaveTop()
 					rank_name[stage][4 - j][k] = rank_name[stage][3 - j][k];
 				}
 			}
-			for (k = 0; k < 11; k++)  //»õ·Î¿î Á¡¼ö°ª ÀÔ·Â
+			for (k = 0; k < 11; k++)  //ìƒˆë¡œìš´ ì ìˆ˜ê°’ ì…ë ¥
 			{
 				rank_name[stage][i][k] = usrName[k];
 			}
@@ -759,7 +761,7 @@ void SaveTop()
 			break;
 		}
 	}
-	//»õ·Î¿î Á¡¼ö°¡ 4¹øÂ°°ªÀÏ¶§
+	//ìƒˆë¡œìš´ ì ìˆ˜ê°€ 4ë²ˆì§¸ê°’ì¼ë•Œ
 	if (rank_cnt[stage][i] > move_cnt || rank_cnt[stage][i] == 0)
 	{
 		rank_cnt[stage][i] = move_cnt;
@@ -772,7 +774,7 @@ void SaveTop()
 
 	fclose(fp);
 
-	//·©Å· ÆÄÀÏ¿¡ ÀúÀå
+	//ë­í‚¹ íŒŒì¼ì— ì €ì¥
 	fp = fopen("ranking.txt", "w");
 
 	for (i = 0; i < 5; i++)
@@ -781,7 +783,7 @@ void SaveTop()
 		{
 			if (rank_name[i][j][0] == ' ' && rank_name[i][j][1] == ' ' && rank_name[i][j][2] == '\0')
 			{
-				fprintf(fp, "... ", rank_name[i][j]); //ÀÌ¸§ÀÌ "  "ÀÌ¸é ... µğÆúÆ® °ªÀ¸·Î ÀúÀå
+				fprintf(fp, "... ", rank_name[i][j]); //ì´ë¦„ì´ "  "ì´ë©´ ... ë””í´íŠ¸ ê°’ìœ¼ë¡œ ì €ì¥
 			}
 			else
 			{
@@ -805,7 +807,7 @@ void Top(int Top_num)
 
 	fp = fopen("ranking.txt", "r");
 
-	//ÀÌ¸§°ú ±â·ÏÀ» ÀĞ¾îµéÀÎ´Ù.
+	//ì´ë¦„ê³¼ ê¸°ë¡ì„ ì½ì–´ë“¤ì¸ë‹¤.
 	while (1)
 	{
 		for (i = 0; i < STAGE; i++)
@@ -820,7 +822,7 @@ void Top(int Top_num)
 						rank_name[i][j][0] = ' ';
 						rank_name[i][j][1] = ' ';
 						rank_name[i][j][2] = '\0';
-						break; //ÀÌ¸§ÀÌ ... µğÆúÆ® °ªÀ¸·Î µÇ¾îÀÖÀ¸¸é ¹è¿­¿¡ "  "À¸·Î ÀúÀåÇÑ´Ù
+						break; //ì´ë¦„ì´ ... ë””í´íŠ¸ ê°’ìœ¼ë¡œ ë˜ì–´ìˆìœ¼ë©´ ë°°ì—´ì— "  "ìœ¼ë¡œ ì €ì¥í•œë‹¤
 					}
 					if (name[k] == '\0')
 					{
@@ -833,16 +835,16 @@ void Top(int Top_num)
 		}
 		if ((fscanf(fp, "%c", &a)) == EOF)
 		{
-			break; //ÆÄÀÏÀÌ ³¡³ª¸é ´õÀÌ»ó ¹İº¹ÇÏÁö ¾Ê´Â´Ù.
+			break; //íŒŒì¼ì´ ëë‚˜ë©´ ë”ì´ìƒ ë°˜ë³µí•˜ì§€ ì•ŠëŠ”ë‹¤.
 		}
 	}
 
-	int s = 0; //ÀÌ¸§ÀÌ ÀúÀåµÇ¾îÀÖ´ÂÁöÀÇ À¯¹«·Î Ãâ·ÂÇÏ±âÀ§ÇÑ º¯¼ö
+	int s = 0; //ì´ë¦„ì´ ì €ì¥ë˜ì–´ìˆëŠ”ì§€ì˜ ìœ ë¬´ë¡œ ì¶œë ¥í•˜ê¸°ìœ„í•œ ë³€ìˆ˜
 
-	//Top_i¿¡ µû¶ó Ãâ·Â
+	//Top_iì— ë”°ë¼ ì¶œë ¥
 	while (1)
 	{
-		clearMap(); //0ÀÏ¶§ ¸ğµç¸ÊÀÇ ±â·Ï Ãâ·Â
+		clearMap(); //0ì¼ë•Œ ëª¨ë“ ë§µì˜ ê¸°ë¡ ì¶œë ¥
 		if (Top_num == 0)
 		{
 			for (i = 0; i < STAGE; i++)
@@ -855,7 +857,7 @@ void Top(int Top_num)
 						if (rank_name[i][j][0] == ' ' && rank_name[i][j][1] == ' ' && rank_name[i][j][2] == '\0')
 						{
 							s = 0;
-							break; //ÀÌ¸§ÀÌ "  "À¸·Î ±â·ÏÀÌ ¾øÀ¸¸é Ãâ·ÂÇÏÁö ¾Ê°Ô ÇÔ
+							break; //ì´ë¦„ì´ "  "ìœ¼ë¡œ ê¸°ë¡ì´ ì—†ìœ¼ë©´ ì¶œë ¥í•˜ì§€ ì•Šê²Œ í•¨
 						}
 						else
 						{
@@ -863,7 +865,7 @@ void Top(int Top_num)
 							break;
 						}
 					}
-					if (s == 1) //±â·ÏÀÌ ÀÖÀ»°æ¿ì Ãâ·Â
+					if (s == 1) //ê¸°ë¡ì´ ìˆì„ê²½ìš° ì¶œë ¥
 					{
 						printf("%s  ", rank_name[i][j]);
 						printf("%d", rank_cnt[i][j]);
@@ -884,7 +886,7 @@ void Top(int Top_num)
 					if (rank_name[i][j][0] == ' ' && rank_name[i][j][1] == ' ' && rank_name[i][j][2] == '\0')
 					{
 						s = 0;
-						break; //ÀÌ¸§ÀÌ "  "À¸·Î ±â·ÏÀÌ ¾øÀ¸¸é Ãâ·ÂÇÏÁö ¾Ê°Ô ÇÔ
+						break; //ì´ë¦„ì´ "  "ìœ¼ë¡œ ê¸°ë¡ì´ ì—†ìœ¼ë©´ ì¶œë ¥í•˜ì§€ ì•Šê²Œ í•¨
 					}
 					else
 					{
@@ -892,7 +894,7 @@ void Top(int Top_num)
 						break;
 					}
 				}
-				if (s == 1) //±â·ÏÀÌ ÀÖÀ»°æ¿ì Ãâ·Â
+				if (s == 1) //ê¸°ë¡ì´ ìˆì„ê²½ìš° ì¶œë ¥
 				{
 					printf("%s  ", rank_name[i][j]);
 					printf("%d", rank_cnt[i][j]);
@@ -901,7 +903,7 @@ void Top(int Top_num)
 			}
 			printf("\n\n(Command) t %d",i + 1);
 		}
-		printf("\n³ª°¡·Á¸é ¿£ÅÍÅ°¸¦ ´©¸£½Ã¿À."); //Ãâ·ÂÈÄ µé¾î¿Â »óÅÂ¸é¼­ t,T ¸¦ ´©¸¦°æ¿ì ºüÁ®³ª°£´Ù.
+		printf("\në‚˜ê°€ë ¤ë©´ ì—”í„°í‚¤ë¥¼ ëˆ„ë¥´ì‹œì˜¤."); //ì¶œë ¥í›„ ë“¤ì–´ì˜¨ ìƒíƒœë©´ì„œ t,T ë¥¼ ëˆ„ë¥¼ê²½ìš° ë¹ ì ¸ë‚˜ê°„ë‹¤.
 		if (getch() == '\n' && t_flg == 1)
 		{
 			t_flg = 0;
@@ -919,16 +921,16 @@ void Display_help()
 	{
 		clearMap();
 		printf("\tHello %s\n", usrName);
-		printf("h : ¿ŞÂÊÀ¸·Î ÀÌµ¿, j : ¾Æ·¡·Î ÀÌµ¿, k : À§·Î ÀÌµ¿, l : ¿À¸¥ÂÊÀ¸·Î ÀÌµ¿\n");
-		printf("u : ¿òÁ÷ÀÌ±â Àü »óÅÂ·Î ÀÌµ¿ÇÑ´Ù. (ÃÖ´ë 5¹ø °¡´É)\n");
-		printf("r : ÇöÀç ¸ÊÀ» Ã³À½ºÎÅÍ ´Ù½Ã½ÃÀÛÇÑ´Ù.\n");
-		printf("n : Ã¹ ¹øÂ° ¸ÊºÎÅÍ ´Ù½Ã ½ÃÀÛ\n");
-		printf("e : °ÔÀÓÁ¾·á\n");
-		printf("s : °ÔÀÓ ÀúÀå\n");
-		printf("f : °ÔÀÓÀ» ÀÌ¾î¼­ÇÑ´Ù.\n");
-		printf("d : ¸í·É³»¿ëÀ» º¸¿©ÁØ´Ù.\n");
-		printf("t : °ÔÀÓ ¼øÀ§¸¦ º¸¿©ÁØ´Ù.\n");
-		printf("³ª°¡·Á¸é ¿£ÅÍÅ°¸¦ ´©¸£½Ã¿À.\n");
+		printf("h : ì™¼ìª½ìœ¼ë¡œ ì´ë™, j : ì•„ë˜ë¡œ ì´ë™, k : ìœ„ë¡œ ì´ë™, l : ì˜¤ë¥¸ìª½ìœ¼ë¡œ ì´ë™\n");
+		printf("u : ì›€ì§ì´ê¸° ì „ ìƒíƒœë¡œ ì´ë™í•œë‹¤. (ìµœëŒ€ 5ë²ˆ ê°€ëŠ¥)\n");
+		printf("r : í˜„ì¬ ë§µì„ ì²˜ìŒë¶€í„° ë‹¤ì‹œì‹œì‘í•œë‹¤.\n");
+		printf("n : ì²« ë²ˆì§¸ ë§µë¶€í„° ë‹¤ì‹œ ì‹œì‘\n");
+		printf("e : ê²Œì„ì¢…ë£Œ\n");
+		printf("s : ê²Œì„ ì €ì¥\n");
+		printf("f : ê²Œì„ì„ ì´ì–´ì„œí•œë‹¤.\n");
+		printf("d : ëª…ë ¹ë‚´ìš©ì„ ë³´ì—¬ì¤€ë‹¤.\n");
+		printf("t : ê²Œì„ ìˆœìœ„ë¥¼ ë³´ì—¬ì¤€ë‹¤.\n");
+		printf("ë‚˜ê°€ë ¤ë©´ ì—”í„°í‚¤ë¥¼ ëˆ„ë¥´ì‹œì˜¤.\n");
 		printf("\n\n(Command) d");
 		if (getch() == '\n' & d_flg == 1)
 		{
@@ -959,7 +961,7 @@ void Replay()
 	move_cnt = 0;
 	undo_cnt = 5;
 	save_cnt = 0;
-	//ÃÊ±â¸Ê°ú ÃÊ±âÇÃ·¹ÀÌ¾îÀ§Ä¡ ºÒ·¯¿À±â
+	//ì´ˆê¸°ë§µê³¼ ì´ˆê¸°í”Œë ˆì´ì–´ìœ„ì¹˜ ë¶ˆëŸ¬ì˜¤ê¸°
 	i = stage_tmp;
 	for (j = 0; j < Y; j++)
 	{
@@ -976,11 +978,11 @@ void New()
 {
 
 	clearMap();
-	stage = 0; //1½ºÅ×ÀÌÁö·Î º¯°æ
+	stage = 0; //1ìŠ¤í…Œì´ì§€ë¡œ ë³€ê²½
 
 	int i, j, k;
 
-	for (int k = 0; k < STAGE; k++)
+	for (int k = 0; k < max_stage; k++)
 	{
 		for (int i = 0; i < Y; i++)
 		{
@@ -994,8 +996,8 @@ void New()
 	move_cnt = 0;
 	undo_cnt = 5;
 	save_cnt = 0;
-	//ÃÊ±â¸Ê°ú ÃÊ±âÇÃ·¹ÀÌ¾îÀ§Ä¡ ºÒ·¯¿À±â
-	for (i = 0; i < STAGE; i++)
+	//ì´ˆê¸°ë§µê³¼ ì´ˆê¸°í”Œë ˆì´ì–´ìœ„ì¹˜ ë¶ˆëŸ¬ì˜¤ê¸°
+	for (i = 0; i < max_stage; i++)
 	{
 		for (j = 0; j < Y; j++)
 		{
